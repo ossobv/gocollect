@@ -1,0 +1,35 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: hostname(hostname)
+# REQUIRES: iproute2(ip)
+# REQUIRES: sed(sed)
+#
+# NOTE: This one is special. The values are used in the communication of
+# every other property.
+
+# func CollectGetHostname() (string) {
+#     var hostname, err = os.Hostname()
+#     Assert(err == nil, err)
+#
+#     var ips []net.IP
+#     ips, err = net.LookupIP(hostname)
+#     Assert(err == nil, err)
+#
+#     var addrs []string
+#     addrs, err = net.LookupAddr(ips[0].String())
+#     Assert(err == nil, err)
+#
+#     return strings.TrimRight(addrs[0], ".")
+# }
+
+fqdn=`hostname -f`
+ip4=`ip route get 255.255.255.255 | sed -e '
+     / dev /!d
+     s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
+     s/ *//g'`
+regid=`cat /var/lib/gocollect/core.id.regid 2>/dev/null`
+if test -n "$regid"; then
+    echo "{\"fqdn\":\"$fqdn\",\"ip4\":\"$ip4\",\"regid\":\"$regid\"}"
+else
+    echo "{\"fqdn\":\"$fqdn\",\"ip4\":\"$ip4\"}"
+fi

@@ -1,0 +1,7 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(cut date)
+
+t0=$((`date +%s` - `cut -d. -f1 /proc/uptime`))
+d0=`TZ=UTC LC_ALL=C date --date @$t0 --rfc-2822`
+echo "{\"unixtime\":\"$t0\",\"rfc2822\":\"$d0\"}"

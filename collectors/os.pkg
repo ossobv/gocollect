@@ -1,0 +1,29 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai syn=sh:
+# REQUIRES: coreutils(sort)
+# REQUIRES: dpkg(dpkg)
+# REQUIRES: findutils(find)
+# REQUIRES: awk(awk) # virtual package provided by gawk/mawk
+# REQUIRES: sed(sed)
+
+dpkg -l | awk '
+    BEGIN { printf "{\"installed\":{"; i=0 }
+    /^ii/ {
+        if (i) printf ","
+        i += 1
+        # drop optional debian epoch
+        version = gensub(/^[0-9]+:/, "", "g", $3);
+        # surround non-numeric tail with dquotes
+        version = gensub(/^([0-9.]+)(.*)/, "\\1.\"\\2\"", "g", version);
+        # drop empty tail
+        version = gensub(/\.""/, "", "g", version);
+        # replace dots with commas (incl. duplicates)
+        version = gensub(/\.+/, ",", "g", version);
+        print "\"" $2 "\":[" version "]"
+    }
+    END { print "},\"sources\":[" }'
+LC_ALL=C sort `
+    find /etc/apt/sources.list /etc/apt/sources.list.d \
+        -name '*.list' -o -name '*.sources'` |
+    sed -e '/^deb /!d;s/^/"/;s/$/",/' |
+    sed -e '$s/,$/]}/'

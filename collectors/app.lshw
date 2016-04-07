@@ -1,0 +1,13 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: lshw(lshw)
+
+lshw -json </dev/null 2>/dev/null
+
+# Output parsing examples
+#
+# * Listing disks from app.lshw:
+#
+#   jq '.children[] | select(.id == "core") | .children[] |
+#       select(.class == "storage") | .children[] |
+#       {logicalname,product,serial,size}'
