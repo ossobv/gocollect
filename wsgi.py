@@ -80,7 +80,7 @@ class DirectoryMixin(object):
         else:
             identifier = os.path.join('{}-gw'.format(sourceip), ip4)
 
-        a, b, c, rest = identifier.split('.', 4)
+        a, b, c, rest = identifier.split('.', 3)
         link = os.path.join(
             self.DATADIR, 'byip4', '{}.{}.{}'.format(a, b, c), identifier)
         dir_ = os.path.dirname(link)
