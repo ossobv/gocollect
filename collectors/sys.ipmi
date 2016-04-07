@@ -1,0 +1,24 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(printf tr)
+# REQUIRES: kmod(modprobe)
+# REQUIRES: sed(sed)
+# REQUIRES: util-linux(lscpu)
+
+modprobe ipmi_msghandler
+modprobe ipmi_devintf
+modprobe ipmi_si
+
+devs=`find /dev -name 'ipmi*' 2>/dev/null | wc -l`
+if test $devs -gt 0; then
+    if which ipmitool >/dev/null; then
+        ipmitool lan print | sed -re '
+            /^ /d
+            s/^([^:]*[^: ]+) *: (.*[^ ]+) *$/"\1":"\2",/;$s/,$/}/
+            1s/^/{/'
+    else
+        echo '{"error":"ipmitool is not installed"}'
+    fi
+else
+    echo '{"error":"No ipmi devices found"}'
+fi

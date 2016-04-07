@@ -1,0 +1,69 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(printf sort tr)
+# REQUIRES: debianutils(which)
+# REQUIRES: sed(sed)
+# REQUIRES: smartmontools(smartctl)
+# REQUIRES: util-linux(lsblk)
+
+
+if ! which smartctl >/dev/null 2>&1; then
+    echo "error: This script requires smartctl. See smartmontools." >&2
+    exit 1
+fi
+
+
+# First, run a scan to find all smart devices (regular and raid) and append
+# lsblk devices to that (so we get NVMe devices as well).
+uniq_by_prefix() {
+    prev=
+    while read line; do
+        first_arg=${line%% *}
+        if test "$prev" != "$first_arg"; then
+            echo "$line"
+            prev="$line"  # save entire line
+        fi
+    done
+}
+devices=`(
+    smartctl --scan | sed -e 's/ *#.*//'
+    lsblk -no TYPE,NAME | sed -e '/^disk/!d;s/[^ ]* */\/dev\//'
+) | sort | uniq_by_prefix`
+
+
+device_n=0
+printf '['
+echo "$devices" | while read line; do
+    # Add -T verypermissive because we don't care if "mandatory" smart
+    # commands don't work.
+    smartctl=`smartctl -T verypermissive -i $line`  # regular devices
+    ret=$?
+
+    # Retry with -d scsi for /dev/nvme* devices?
+    test $ret -ne 0 &&
+        smartctl=`smartctl -T verypermissive -d scsi -i $line` &&
+        ret=0
+
+    if test $ret -eq 0; then
+        comma=
+        test $device_n -gt 0 && comma=,
+
+        dev=`echo "$line" | sed -e 's/ .*//'`
+        name=`echo "$smartctl" |
+              sed -e '/^Vendor\|^Product\|Model/!d;s/^[^:]*:[[:blank:]]*//' |
+              tr '\n' ' ' | sed -e 's/ $//'`
+        bytes=`echo "$smartctl" |
+               sed -e '/Capacity/!d;s/^[^:]*:[[:blank:]]*//;s/ bytes.*//;s/,//g'`
+        serial=`echo "$smartctl" |
+                sed -e '/^Serial/!d;s/^[^:]*:[[:blank:]]*//'`
+        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+            "$comma" logicalname "$dev" product "$name" \
+            serial "$serial" size "$bytes"
+
+        device_n=$((device_n + 1))
+        last_valid="$dev"
+    else
+        echo "warning: failed to read $line" >&2
+    fi
+done
+printf ']\n'

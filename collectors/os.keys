@@ -1,0 +1,16 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(cut)
+# REQUIRES: openssh-client(ssh-keygen)
+# REQUIRES: sed(sed)
+
+echo '{"ssh":['
+cut -d: -f6 /etc/passwd | while read dir; do
+    output=`ssh-keygen -E sha512 -lf "$dir/.ssh/authorized_keys" 2>/dev/null`
+    if test -n "$output"; then
+        escdir=`echo "$dir" | sed -e 's#/#\\\/#g'`
+        echo "$output" | LC_ALL=C sort | sed -e '
+            s/\([0-9]*\) \([^ ]*\) \(.*\)/{"bits":\1,"hash":"\2","path":"'$escdir'","comment":"\3"},/'
+    fi
+done | sed -e '$s/,$/]/'
+echo '}'

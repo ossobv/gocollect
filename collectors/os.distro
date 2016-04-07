@@ -1,0 +1,18 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(printf uname)
+# REQUIRES: sed(sed)
+
+output=`lsb_release -a 2>/dev/null`
+name=`echo "$output" |
+      sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//'`
+version=`echo "$output" | sed -e '
+            /^Release/!d;s/^[^:]*:[[:blank:]]*//
+            s/\([0-9.]\+\)\(.*\)/\1."\2"/;s/\.""$//;s/\./,/g'`
+codename=`echo "$output" |
+          sed -e '/^Codename/!d;s/^[^:]*:[[:blank:]]*//'`
+comment=`echo "$output" |
+         sed -e '/^Description/!d;s/^[^:]*:[[:blank:]]*//;s/"//g'`
+
+printf '{"name":"%s","version":[%s],"codename":"%s","comment":"%s"}\n' \
+    "$name" "$version" "$codename" "$comment"
