@@ -36,8 +36,6 @@ TODO list
 
 Short todo:
 
-- tag first version, create source build
-- package the thing for various OSes
 - dmidecode output (go or awk?, if go then we must allow lots of other
   collectors to be go-ified as well)
 
