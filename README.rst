@@ -42,21 +42,36 @@ TODO list
 Packaging for Debian
 --------------------
 
+Prerequisites:
+
 .. code-block:: console
 
     $ sudo apt-get install git-buildpackage dh-make dh-systemd
 
+Optional:
+
+.. code-block:: console
+
     $ cat > .git/gbp.conf << EOF
     [DEFAULT]
     upstream-branch=master
-    debian-branch=debian/jessie
+    debian-branch=debian
 
     [buildpackage]
     upstream-tag = v%(version)s
     EOF
 
-    $ git checkout debian/jessie
-    $ gbp buildpackage --git-ignore-new -us -uc -sa
+Running:
+
+.. code-block:: console
+
+    $ git checkout debian
+    $ gbp buildpackage -us -uc -sa \
+        --git-debian-branch=debian --git-upstream-tag='v%(version)s'
+
+(Note that rcX versions must be tagged as ``v1.2_rc3`` where in Debian
+the underscore is a tilde.)
+
 
 
 Golang notes to self
