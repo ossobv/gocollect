@@ -34,20 +34,6 @@ And install prerequisites::
 TODO list
 ---------
 
-Short todo:
-
-- dmidecode output (go or awk?, if go then we must allow lots of other
-  collectors to be go-ified as well)
-- uptime issue:
-    root@walter-dev:0:~# date +%s; cat /proc/uptime
-    1460040758
-    1731619.0 1725061.0
-    root@walter-dev:0:~# date +%s; cat /proc/uptime
-    1460040759
-    1731619.0 1725061.0
-
-Long todo:
-
 - network-whitelist on the REST server
 - redo debian-depends stuff
 - add manpage

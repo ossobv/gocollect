@@ -1,7 +1,21 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(cut date)
+# REQUIRES: coreutils(cut date sleep sort uniq)
+# REQUIRES: sed(sed)
 
-t0=$((`date +%s` - `cut -d. -f1 /proc/uptime`))
+# Taking the current time, the quick way; may yield incidental differing
+# values.
+#   t0=$((`date +%s` - `cut -d. -f1 /proc/uptime`))
+# Again, but this time we take the most common value out of 10. Note
+# that some sleep(1) binaries may not do fractions in which case we
+# fall back to sleeping entire seconds.
+get_t0() {
+    for x in 0 1 2 3 4 5 6 7 8 9; do
+        echo $((`date +%s` - `cut -d. -f1 /proc/uptime`))
+        sleep 0.1 2>/dev/null || sleep 1
+    done | sort | uniq -c | sort -rn | sed -ne 's/.* \([^ ]*\)$/\1/p;q'
+}
+
+t0=`get_t0`
 d0=`TZ=UTC LC_ALL=C date --date @$t0 --rfc-2822`
 echo "{\"unixtime\":\"$t0\",\"rfc2822\":\"$d0\"}"
