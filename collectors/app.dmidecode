@@ -1,0 +1,64 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: awk(awk)
+# REQUIRES: dmidecode(dmidecode)
+# NOTE: Remember to test changes with mawk(1).
+
+dmidecode 2>/dev/null | awk '
+BEGIN {
+    RS = "\nHandle[^\n]*\n"
+    comma_1 = 0
+    print "{"
+}
+END {
+    print "}"
+}
+{
+    gsub("\"", "")
+    arraylen = split($0, array, "\n")
+    key = array[1]
+    if (!(match(key, "#") == 1 || key == "End Of Table")) {
+        if (comma_1) print ","
+        else comma_1 = 1
+        print "\"" key "\":{"
+        comma_2 = 0
+        for (idx = 2; idx <= arraylen; idx++) {
+            if (!array[idx]) continue
+            if (comma_2) print ","
+            else comma_2 = 1
+            key = getkey(array[idx])
+            if (substr(array[idx+1], 1, 2) == "\t\t") {
+                print "\"" key "\":["
+                idx++
+                comma_3 = 0
+                for (; idx <= arraylen; idx++) {
+                    if (substr(array[idx], 1, 2) == "\t\t") {
+                        if (comma_3) print ","
+                        else comma_3 = 1
+                        print "\"" substr(array[idx], 3) "\""
+                    } else {
+                        break
+                    }
+                }
+                print "]"
+                idx--
+            } else {
+                value = getvalue(array[idx])
+                print "\"" key "\":\"" value "\""
+            }
+        }
+        print "}"
+    }
+}
+function getkey(keyvalue) {
+    nonspace = match(keyvalue, "[^ \t]")
+    colon = index(keyvalue, ":")
+    return substr(keyvalue, nonspace, colon - nonspace)
+}
+function getvalue(keyvalue) {
+    colon = index(keyvalue, ":")
+    keyvalue = substr(keyvalue, colon + 1)
+    nonspace = match(keyvalue, "[^ \t]")
+    return substr(keyvalue, nonspace)
+}
+'
