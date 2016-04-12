@@ -1,6 +1,6 @@
 # vim: set syn=systemd:
 [Unit]
-Description=GoCollect collects system info and pushes it to a central server
+Description=GoCollect, the rarely changing sysinfo collector
 
 [Service]
 ExecStart=/usr/sbin/gocollect
