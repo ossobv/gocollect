@@ -1,11 +1,14 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: coreutils(tr)
+# REQUIRES: dmidecode(dmidecode)
 # REQUIRES: hostname(hostname)
 # REQUIRES: iproute2(ip)
 # REQUIRES: sed(sed)
 #
 # NOTE: This one is special. The values are used in the communication of
-# every other property.
+# every other property. It is also used when registering: the core.id
+# body is passed as registration data.
 
 # func CollectGetHostname() (string) {
 #     var hostname, err = os.Hostname()
@@ -22,14 +25,35 @@
 #     return strings.TrimRight(addrs[0], ".")
 # }
 
+# fqdn: The fully qualified (hopefully) hostname.
 fqdn=`hostname -f`
+json="\"fqdn\":\"$fqdn\""
+
+# ip4: The default IP4 source IP.
 ip4=`ip route get 255.255.255.255 | sed -e '
      / dev /!d
      s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
      s/ *//g'`
+test -n "$ip4" && json="$json,\"ip4\":\"$ip4\""
+
+# regid: The UUID previously received when registering.
 regid=`cat /var/lib/gocollect/core.id.regid 2>/dev/null`
-if test -n "$regid"; then
-    echo "{\"fqdn\":\"$fqdn\",\"ip4\":\"$ip4\",\"regid\":\"$regid\"}"
-else
-    echo "{\"fqdn\":\"$fqdn\",\"ip4\":\"$ip4\"}"
-fi
+test -n "$regid" && json="$json,\"regid\":\"$regid\""
+
+# A bunch of values from dmidecode -t 1:
+# - system-uuid: Can be used by VM host to set uuid
+# - system-product-name: Can be used by VM host to set server name
+# - system-manufacturer: Can be used by VM host to set customer name
+for key in system-manufacturer system-product-name system-version \
+        system-serial-number system-uuid; do
+    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//'`
+    if test -n "$value"; then
+        if test "$key" = "system-uuid"; then
+            value=`echo "$value" | tr '[:upper:]' '[:lower:]'`
+        fi
+        json="$json,\"$key\":\"$value\""
+    fi
+done
+
+# Output.
+echo "{$json}"
