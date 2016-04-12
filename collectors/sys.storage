@@ -48,14 +48,14 @@ echo "$devices" | while read line; do
         comma=
         test $device_n -gt 0 && comma=,
 
-        dev=`echo "$line" | sed -e 's/ .*//'`
+        dev=`echo "$line" | sed -e 's/ .*//;s/"//g'`
         name=`echo "$smartctl" |
-              sed -e '/^Vendor\|^Product\|Model/!d;s/^[^:]*:[[:blank:]]*//' |
+              sed -e '/^Vendor\|^Product\|Model/!d;s/^[^:]*:[[:blank:]]*//;s/"//g' |
               tr '\n' ' ' | sed -e 's/ $//'`
         bytes=`echo "$smartctl" |
-               sed -e '/Capacity/!d;s/^[^:]*:[[:blank:]]*//;s/ bytes.*//;s/,//g'`
+               sed -e '/Capacity/!d;s/^[^:]*:[[:blank:]]*//;s/ bytes.*//;s/,//g;s/"//g'`
         serial=`echo "$smartctl" |
-                sed -e '/^Serial/!d;s/^[^:]*:[[:blank:]]*//'`
+                sed -e '/^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g'`
         printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
             "$comma" logicalname "$dev" product "$name" \
             serial "$serial" size "$bytes"
