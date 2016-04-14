@@ -12,5 +12,5 @@ cut -d: -f6 /etc/passwd | while read dir; do
         echo "$output" | LC_ALL=C sort | sed -e '
             s/\([0-9]*\) \([^ ]*\) \(.*\)/{"bits":\1,"hash":"\2","path":"'$escdir'","comment":"\3"},/'
     fi
-done | sed -e '$s/,$/]/'
-echo '}'
+done | sed -e '$s/,$//'
+echo ']}'

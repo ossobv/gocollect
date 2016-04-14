@@ -24,18 +24,21 @@ type CollectedData struct {
     readpos int  // read-once position
 }
 
-func NewCollected(data []byte) Collected {
+func NewCollected(data []byte) (Collected, error) {
     // Compact the data and validate it at the same time.
     compacted := new(bytes.Buffer)
     e := json.Compact(compacted, data)
     if e != nil {
         // Parse error: invalid json, return null
-        // TODO: debug log
-        return nil
+        return nil, e
     }
 
+    // Append a single linefeed which does no harm but is tremendously
+    // beneficial for readability when storing the json as plaintext.
+    compacted.WriteByte('\n')
+
     tmp := CollectedData{data: compacted.String()}
-    return &tmp
+    return &tmp, nil
 }
 
 func (c *CollectedData) Read(p []byte) (n int, err error) {

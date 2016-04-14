@@ -26,9 +26,19 @@ install-collectors: $(COLLECTORS)
 	install -t $(DESTDIR)$(prefix)/share/gocollect/collectors $^
 install-rc:
 	install -D -m0644 gocollect.conf.sample $(DESTDIR)/etc/gocollect.conf.sample
-	install -D -m0755 rc/debian.sysv $(DESTDIR)/etc/init.d/gocollect
-	install -D -m0644 rc/upstart.conf $(DESTDIR)/etc/init/gocollect.conf
-	install -D -m0644 rc/systemd.service $(DESTDIR)/lib/systemd/system/gocollect.service
+	# The debian postinst scripts use invoke-rc.d to start/stop. On systemd
+	# machines that means that we need the SysV init scripts as well.
+	if ! initctl --version >/dev/null 2>&1; then \
+		install -D -m0755 rc/debian.sysv $(DESTDIR)/etc/init.d/gocollect; \
+		install -D -m0644 rc/systemd.service $(DESTDIR)/lib/systemd/system/gocollect.service; \
+		systemctl daemon-reload >/dev/null 2>&1 || true; \
+	fi
+	# The debian postinst scripts would invoke the SysV scripts as well as
+	# install the upstart script. Not nice. We need only one.
+	if initctl --version >/dev/null 2>&1; then \
+		install -D -m0644 rc/upstart.conf $(DESTDIR)/etc/init/gocollect.conf; \
+	fi
+
 
 .PHONY: uninstall uninstall-gocollect uninstall-collectors
 uninstall: uninstall-gocollect uninstall-collectors uninstall-rc
@@ -43,8 +53,8 @@ uninstall-collectors:
 uninstall-rc:
 	$(RM) $(DESTDIR)/etc/gocollect.conf.sample
 	$(RM) $(DESTDIR)/etc/init.d/gocollect
-	$(RM) $(DESTDIR)/etc/init/gocollect.conf
 	$(RM) $(DESTDIR)/lib/systemd/system/gocollect.service
+	$(RM) $(DESTDIR)/etc/init/gocollect.conf
 
 .PHONY: debian-depends
 debian-depends:

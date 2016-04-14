@@ -24,7 +24,11 @@ dpkg -l | awk '
         gsub("[.]+", ",", version)
         print "\"" $2 "\":[" version "]"
     }
-    END { print "},\"sources\":[" }'
+    END { print "},\"sources\":[" }' |
+    sed -e 's/\([^0-9]\)0\+\([0-9]\)/\1\2/g'
+    # ^ this last sed here drops leading 0's in number (and in other
+    # data). This is needed because the go Json compactor doesn't like
+    # leading zeroes.
 LC_ALL=C sort `
     find /etc/apt/sources.list /etc/apt/sources.list.d \
         -name '*.list' -o -name '*.sources'` |

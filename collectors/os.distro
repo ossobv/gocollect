@@ -8,7 +8,10 @@ name=`echo "$output" |
       sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//'`
 version=`echo "$output" | sed -e '
             /^Release/!d;s/^[^:]*:[[:blank:]]*//
-            s/\([0-9.]\+\)\(.*\)/\1."\2"/;s/\.""$//;s/\./,/g'`
+            s/\([0-9.]\+\)\(.*\)/\1."\2"/
+            s/\.""$//
+            s/\./,/g
+            s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
 codename=`echo "$output" |
           sed -e '/^Codename/!d;s/^[^:]*:[[:blank:]]*//'`
 comment=`echo "$output" |

@@ -75,7 +75,14 @@ func (c *Collectors) Run(key string) Collected {
         return nil
     }
 
-    return NewCollected(stdout)
+    ret, e := NewCollected(stdout)
+    if e != nil {
+        logger.Printf(
+            "collector[%s]: decode error: %s", key, e.Error())
+        logger.Printf("collector[%s]: data: %s", key, stdout)
+    }
+
+    return ret
 }
 
 func isExecutable(fileinfo os.FileInfo) bool {
