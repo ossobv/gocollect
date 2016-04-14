@@ -46,7 +46,7 @@ test -n "$regid" && json="$json,\"regid\":\"$regid\""
 # - system-manufacturer: Can be used by VM host to set customer name
 for key in system-manufacturer system-product-name system-version \
         system-serial-number system-uuid; do
-    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//'`
+    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//;s/ *$//;/^#/d'`
     if test -n "$value"; then
         if test "$key" = "system-uuid"; then
             value=`echo "$value" | tr '[:upper:]' '[:lower:]'`
