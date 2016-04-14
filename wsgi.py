@@ -24,37 +24,64 @@ class DirectoryMixin(object):
                 raise
 
     def symlink(self, dest, link):
-        # TODO: only write if changed
         try:
-            os.symlink(dest, link)
-        except OSError as e:
-            if e.errno != 17:  # EEXIST
-                raise
+            if os.readlink(link) == dest:
+                return
+        except OSError:
+            pass
+        else:
+            # TODO: check if symlink?
             os.unlink(link)
-            os.symlink(dest, link)
+        os.symlink(dest, link)
+
+    def check_key(self, key):
+        """
+        Ensure that the data-key is valid (and contains no filesystem unsafe
+        characters).
+        """
+        if not key or any(
+                i not in 'abcdefghijklmnopqrstuvwxyz0123456789.-'
+                for i in key):
+            raise ValueError('crap in key', key)
+
+    def check_regid(self, regid):
+        """
+        Ensure that the node-regid is valid (and contains no filesystem unsafe
+        characters).
+        """
+        if len(self.regid) != 36 or any(
+                i not in '0123456789abcdef-' for i in self.regid):
+            raise ValueError('crap in regid', self.regid)
 
     def get_nodedir(self):
         if not hasattr(self, '_nodedir'):
-            if len(self.regid) != 36 or any(
-                    i not in '0123456789abcdef-' for i in self.regid):
-                raise ValueError('crap in regid', self.regid)
-
-            dir_ = os.path.join(self.DATADIR, 'nodes', self.regid[0:2], self.regid)
+            self.check_regid(self.regid)
+            dir_ = os.path.join(self.DATADIR, 'nodes', self.regid[0:2],
+                                self.regid)
             self.makedirs(dir_)
             self._nodedir = dir_
         return self._nodedir
 
     def get_datadir(self, key):
+        """
+        Returns: nodes/id/_history/key (used as storage dir)
+        """
         if not hasattr(self, '_datadir'):
-            if not key or any(
-                    i not in 'abcdefghijklmnopqrstuvwxyz0123456789.-'
-                    for i in key):
-                raise ValueError('crap in key', key)
-
-            dir_ = os.path.join(self.get_nodedir(), key)
+            self.check_key(key)
+            dir_ = os.path.join(self.get_nodedir(), '_history', key)
             self.makedirs(dir_)
             self._datadir = dir_
         return self._datadir
+
+    def get_datalink(self, key):
+        """
+        Returns: nodes/id/key (used as symlink to latest data)
+        """
+        if not hasattr(self, '_datalink'):
+            self.check_key(key)
+            link = os.path.join(self.get_nodedir(), key)
+            self._datalink = link
+        return self._datalink
 
     def link_byhostname(self, hostname):
         assert '/' not in hostname, hostname
@@ -110,8 +137,11 @@ class Collector(DirectoryMixin):
         self.bodylen = bodylen
         self.bodyfp = bodyfp
 
-    def get_keydir(self):  # beware: changing func signature
+    def get_keydir(self):
         return self.get_datadir(self.collectkey)
+
+    def get_keylink(self):
+        return self.get_datalink(self.collectkey)
 
     def write_temp(self):
         body = self.bodyfp.read(self.bodylen)
@@ -146,8 +176,11 @@ class Collector(DirectoryMixin):
             # timestamp.
             newfile = os.path.join(
                 datadir, datetime.now().strftime('%Y-%m-%d_%H:%M'))
-            os.rename(tempname, os.path.join(datadir, newfile))
+            os.rename(tempname, newfile)
             tempname = None
+
+            # Fix symlink to new file.
+            self.symlink(newfile, self.get_keylink())
 
             # Truncate the amount of history for the app.* keys; keeping
             # 5 data files.
@@ -190,7 +223,8 @@ def application(environ, start_response):
         if uri == '/register/':
             registrar = Registrar(source, length, environ['wsgi.input'])
             regid = registrar.register()
-            start_response('200 OK', [('Content-Type', 'application/json')])
+            start_response(
+                '200 OK', [('Content-Type', 'application/json')])
             yield '{{"data": {{"regid": "{}"}}}}\n'.format(regid)
 
         elif uri.startswith('/update/'):
@@ -199,11 +233,13 @@ def application(environ, start_response):
             collector = Collector(regid, collector_key, source,
                                   length, environ['wsgi.input'])
             collector.collect()
-            start_response('200 OK', [('Content-Type', 'application/json')])
+            start_response(
+                '200 OK', [('Content-Type', 'application/json')])
             yield '{"data": {}}\n'
 
         else:
-            start_response('404 Not Found', [('Content-Type', 'application/json')])
+            start_response(
+                '404 Not Found', [('Content-Type', 'application/json')])
             yield '{"error": "Bad URI"}\n'
 
     else:
