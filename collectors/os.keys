@@ -7,10 +7,12 @@
 echo '{"ssh":['
 cut -d: -f6 /etc/passwd | while read dir; do
     output=`ssh-keygen -E sha512 -lf "$dir/.ssh/authorized_keys" 2>/dev/null`
+    # Not every ssh-keygen has -E sha512 yet.
+    test -z "$output" && output=`ssh-keygen -lf "$dir/.ssh/authorized_keys" 2>/dev/null`
     if test -n "$output"; then
         escdir=`echo "$dir" | sed -e 's#/#\\\/#g'`
         echo "$output" | LC_ALL=C sort | sed -e '
-            s/\([0-9]*\) \([^ ]*\) \(.*\)/{"bits":\1,"hash":"\2","path":"'$escdir'","comment":"\3"},/'
+            s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escdir'","comment":"\3"},/'
     fi
 done | sed -e '$s/,$//'
 echo ']}'
