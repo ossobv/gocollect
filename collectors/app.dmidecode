@@ -17,6 +17,7 @@ END {
     gsub("\"", "")
     arraylen = split($0, array, "\n")
     key = array[1]
+    key = lstrip(key)  # bug in dmidecode 2.11-9 has TAB before handle 0x1C
     if (!(match(key, "#") == 1 || key == "End Of Table")) {
         if (comma_1) print ","
         else comma_1 = 1
@@ -49,6 +50,9 @@ END {
         }
         print "}"
     }
+}
+function lstrip(key) {
+    return substr(key, match(key, "[^ \t]"))
 }
 function getkey(keyvalue) {
     nonspace = match(keyvalue, "[^ \t]")
