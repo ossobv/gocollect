@@ -37,6 +37,9 @@ TODO list
 - network-whitelist on the REST server
 - redo debian-depends stuff
 - add manpage
+- background job for pushing authlogs?
+  journalctl -f -l SYSLOG_FACILITY=4 -o json
+- fix gocollect -V license/version
 
 
 Packaging for Debian
