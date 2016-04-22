@@ -4,19 +4,34 @@
 # REQUIRES: openssh-client(ssh-keygen)
 # REQUIRES: sed(sed)
 
+list_keys() {
+    # Older ssh-keygen will only show the fingerprint of a single key.
+    # So we iterate over the file and print the lines.
+    # Also, older ssh-keygen doesn't allow -E sha512 to specify the
+    # fingerprint hash. And, we also want the "default", because sshd
+    # uses that in the logs.
+    tmp=`mktemp`
+    while read line; do
+        echo "$line" > "$tmp"
+        # Only echo stdout if zero status.
+        out=`ssh-keygen -E sha512 -lf "$tmp" 2>/dev/null` && echo "$out"
+        out=`ssh-keygen -lf "$tmp" 2>/dev/null` && echo "$out"
+    done
+    rm "$tmp"
+}
+
 echo '{"ssh":['
-cut -d: -f6 /etc/passwd | while read dir; do
-    output=`(
-        # keygen both with sha256 and default:
-        # - some ssh-keygens don't support -E
-        # - the sshd logs the "default"-style hash, so we want that too
-        ssh-keygen -E sha512 -lf "$dir/.ssh/authorized_keys" 2>/dev/null
-        ssh-keygen -lf "$dir/.ssh/authorized_keys" 2>/dev/null
-    ) | sort -u`
-    if test -n "$output"; then
-        escdir=`echo "$dir" | sed -e 's#/#\\\/#g'`
-        echo "$output" | LC_ALL=C sort | sed -e '
-            s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escdir'","comment":"\3"},/'
-    fi
+(
+    # Guess authorized_keys in <homedir>/.ssh
+    cut -d: -f6 /etc/passwd | sort -u | sed -e 's#$#/.ssh/authorized_keys#'
+    # Find authorized_keys files in /etc/ssh for ecryptfs systems.
+    find /etc/ssh -name authorized_keys
+) | sort -u | while read file; do
+    # Readable non-empty file? If not, move to next.
+    test -s "$file" || continue
+
+    escfile=`echo "$file" | sed -e 's#/#\\\/#g'`
+    list_keys < "$file" | LC_ALL=C sort -u | sed -e '
+        s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escfile'","comment":"\3"},/'
 done | sed -e '$s/,$//'
 echo ']}'
