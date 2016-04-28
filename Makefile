@@ -4,7 +4,9 @@ prefix = /usr
 
 SOURCES = $(wildcard *.go) $(wildcard gocollector/*.go)
 COLLECTORS = $(wildcard collectors/[a-z]*.*)
-VERSION = $(shell git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | tr '_' '~')
+VERSION_FROM_DEB := sed -e '1!d;s/.*(\([^)]*\)).*/\1/' debian/changelog 2>/dev/null
+VERSION_FROM_GIT := git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | tr '_' '~'
+VERSION = $(shell $(VERSION_FROM_DEB) || $(VERSION_FROM_GIT))
 GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
