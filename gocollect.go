@@ -16,6 +16,10 @@ import (
     "./gocollector"
 )
 
+// Initialized by -X ldflag. (Should be const, but is not allowed by the
+// language.)
+var versionStr string
+
 // The configfile consists of a series of key=value pairs where key is
 // not unique. However, for keys where only a single value makes sense,
 // only the *last* value found will be used.
@@ -34,10 +38,18 @@ var optionDefinition = getopt.Options{
 }
 
 func version() {
-    fmt.Print(
-        ("gocollect ALPHA\n" +
-         "Copyright ... OSSO ... wjd\n" +
-         "License ... undecided\n"))
+    fmt.Printf(
+        ("gocollect (GoCollect sysinfo collector) %s\n" +
+         "Copyright (C) 2016 OSSO B.V.\n" +
+         "License GPLv3+: GNU GPL version 3 or later " +
+         "<http://gnu.org/licenses/gpl.html>.\n" +
+         "This is free software: you are free to change " +
+         "and redistribute it.\n" +
+         "There is NO WARRANTY, to the extent permitted by law.\n" +
+         "\n" +
+         "Written by Walter Doekes. " +
+         "See <https://github.com/ossobv/gocollect>.\n"),
+        versionStr)
 }
 
 func parseArgsOrExit() (options map[string]getopt.OptionValue) {

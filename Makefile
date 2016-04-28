@@ -4,6 +4,8 @@ prefix = /usr
 
 SOURCES = $(wildcard *.go) $(wildcard gocollector/*.go)
 COLLECTORS = $(wildcard collectors/[a-z]*.*)
+VERSION = $(shell git describe --tags --match "v[0-9]*" --abbrev=4 HEAD)
+GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
 .PHONY: all clean
@@ -13,7 +15,7 @@ clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
-	go build gocollect.go
+	go build $(GOLDFLAGS) gocollect.go
 
 .PHONY: install install-gocollect install-collectors install-rc
 install: install-gocollect install-collectors install-rc
