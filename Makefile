@@ -4,7 +4,7 @@ prefix = /usr
 
 SOURCES = $(wildcard *.go) $(wildcard gocollector/*.go)
 COLLECTORS = $(wildcard collectors/[a-z]*.*)
-VERSION = $(shell git describe --tags --match "v[0-9]*" --abbrev=4 HEAD)
+VERSION = $(shell git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | tr '_' '~')
 GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
