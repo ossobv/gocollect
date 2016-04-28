@@ -33,6 +33,8 @@ var optionDefinition = getopt.Options{
     getopt.Definitions{
         {"config|c", "config file", getopt.Optional, defaultConfigFile},
         {"one-shot|s", "run once and exit", getopt.Flag, false},
+        {"without-root", "allow run as non-privileged user", getopt.Flag,
+         false},
         {"version|V", "print version", getopt.Flag, false},
     },
 }
@@ -120,6 +122,18 @@ func main() {
 
     // Check config file.
     config := parseConfigOrExit(options["config"].String)
+
+    // Passed options scan. Check that user is root.
+    if os.Getuid() != 0 && !options["without-root"].Bool {
+	fmt.Fprintf(
+            os.Stderr,
+            ("%s: Running gocollect as non-privileged user may " +
+             "cause several\n" +
+             "collectors to return too little info. Pass --without-root " +
+             "to bypass this check.\n"),
+            path.Base(os.Args[0]))
+	os.Exit(1)
+    }
 
     // Take options and config and extract relevant values.
     var registerUrl, pushUrl string
