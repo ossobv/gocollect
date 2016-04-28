@@ -40,6 +40,10 @@ test -n "$ip4" && json="$json,\"ip4\":\"$ip4\""
 regid=`cat /var/lib/gocollect/core.id.regid 2>/dev/null`
 test -n "$regid" && json="$json,\"regid\":\"$regid\""
 
+# machine-id: Systemd style machine identification number.
+machineid=`cat /etc/machine-id 2>/dev/null`
+test -n "$machineid" && json="$json,\"machine-id\":\"$machineid\""
+
 # A bunch of values from dmidecode -t 1:
 # - system-uuid: Can be used by VM host to set uuid
 # - system-product-name: Can be used by VM host to set server name
