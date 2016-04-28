@@ -1,14 +1,36 @@
-# vim: set ts=8 sw=4 sts=4 et ai:
+"""
+Example GoCollect wsgi server that stores the collected items in a filesystem tree.
+
+Default storage location: ``/srv/data/gocollect``
+
+Example uwsgi config::
+
+    [uwsgi]
+    wsgi-file = /srv/http/gocollect.example.com/wsgi_to_filestorage.py
+    workers = 2
+
+Example nginx config::
+
+    location ~ ^/client/v1(/.*) {
+        uwsgi_pass unix:/var/run/uwsgi/app/gocollect/socket;
+        include uwsgi_params;
+        # PATH_INFO shall contain only the application-specific path,
+        # not the path to the application itself.
+        # https://www.python.org/dev/peps/pep-0333/
+        # https://www.python.org/dev/peps/pep-0444/
+        uwsgi_param SCRIPT_NAME /client/v1;     # unset by default
+        uwsgi_param PATH_INFO $1;               # remove "/client/v1"
+        # Setting uwsgi_modifier1 along with the SCRIPT_NAME
+        # above is also possible, but deprecated by uWSGI.
+        #uwsgi_modifier1 30; # UWSGI_MODIFIER_MANAGE_PATH_INFO
+    }
+"""
 import json
 import os
 import tempfile
 import uuid
+
 from datetime import datetime
-
-
-# If we're not served from the root of a virtualhost, this needs to be
-# non-empty.
-URI_PREFIX = '/gocollect'
 
 
 class DirectoryMixin(object):
@@ -205,7 +227,7 @@ class Collector(DirectoryMixin):
 
 def application(environ, start_response):
     method = environ['REQUEST_METHOD']
-    uri = environ['REQUEST_URI']
+    uri = environ['PATH_INFO']  # PATH_INFO is application-specific REQUEST_URI
     source = environ['REMOTE_ADDR']
     length = int(environ.get('CONTENT_LENGTH') or '0')
 
@@ -217,8 +239,6 @@ def application(environ, start_response):
         # FIXME: confirm that this is https?
         # FIXME: do auth? :)
         # FIXME: do we allow the user to pass a different IP? perhaps we do
-        assert uri.startswith(URI_PREFIX), uri
-        uri = uri[len(URI_PREFIX):]
 
         if uri == '/register/':
             registrar = Registrar(source, length, environ['wsgi.input'])
@@ -260,3 +280,5 @@ def _is_file_equal(file1, file2):
                 if not buf1:
                     break
     return True
+
+# vim: set ts=8 sw=4 sts=4 et ai:
