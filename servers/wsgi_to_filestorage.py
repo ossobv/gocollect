@@ -8,6 +8,8 @@ Example uwsgi config::
     [uwsgi]
     wsgi-file = /srv/http/gocollect.example.com/wsgi_to_filestorage.py
     workers = 2
+    # You need may need full uwsgi restart after unsetting this.
+    env = GOCOLLECT_DATADIR=/var/lib/gocollect
 
 Example nginx config::
 
@@ -35,7 +37,7 @@ from datetime import datetime
 
 class DirectoryMixin(object):
     # DATADIR = os.path.abspath(os.path.dirname(sys.argv[0]))
-    DATADIR = '/srv/data/gocollect'
+    DATADIR = os.environ.get('GOCOLLECT_DATADIR', '/srv/data/gocollect')
     DIRMODE = 0o0700
 
     def makedirs(self, dir_):
