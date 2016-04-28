@@ -72,8 +72,10 @@ Running:
     $ gbp buildpackage -us -uc -sa \
         --git-debian-branch=debian --git-upstream-tag='v%(version)s'
 
-(Note that rcX versions must be tagged as ``v1.2_rc3`` where in Debian
-the underscore is a tilde.)
+Note that rcX versions must be tagged as ``v1.2_rc3`` where in Debian
+the underscore is a tilde. Pre-release major versions shall be called
+``v1.3_dev`` which sorts lower than ``v1.3_rc1``, which in turn comes
+before ``v1.3``.
 
 
 
