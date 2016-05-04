@@ -147,9 +147,10 @@ class Registrar(DirectoryMixin):
         # Should then fetch and return old regid? Ignore for now.
         self.seenip = seenip
         if bodylen is None:
-            self.data = _read_chunked(bodyfp)
+            data = _read_chunked(bodyfp)
         else:
-            self.data = bodyfp.read(bodylen)
+            data = bodyfp.read(bodylen)
+        del data  # ignore for now..
 
     def register(self):
         self.regid = str(uuid.uuid4())
@@ -242,7 +243,7 @@ def application(environ, start_response):
 
     if method == 'HEAD':
         start_response('200 OK', [])
-        yield ''
+        yield b''
 
     elif method == 'POST':
         # FIXME: confirm that this is https?
@@ -258,7 +259,7 @@ def application(environ, start_response):
             regid = registrar.register()
             start_response(
                 '200 OK', [('Content-Type', 'application/json')])
-            yield '{{"data": {{"regid": "{}"}}}}\n'.format(regid)
+            yield b'{{"data": {{"regid": "{}"}}}}\n'.format(regid)
 
         elif uri.startswith('/update/'):
             head, update, regid, collector_key, tail = uri.split('/')
@@ -268,16 +269,16 @@ def application(environ, start_response):
             collector.collect()
             start_response(
                 '200 OK', [('Content-Type', 'application/json')])
-            yield '{"data": {}}\n'
+            yield b'{"data": {}}\n'
 
         else:
             start_response(
                 '404 Not Found', [('Content-Type', 'application/json')])
-            yield '{"error": "Bad URI"}\n'
+            yield b'{"error": "Bad URI"}\n'
 
     else:
         start_response('405 Not Allowed', [('Allowed', 'HEAD, POST')])
-        yield '405'
+        yield b'405'
 
 
 def _is_file_equal(file1, file2):
@@ -300,21 +301,21 @@ def _read_chunked(fp):
     num = []
     while True:
         byte = fp.read(1)
-        if num and byte == '\n':
-            length = int(''.join(num), 16)
+        if num and byte == b'\n':
+            length = int(b''.join(num), 16)
             if not length:
                 break
 
             data.append(fp.read(length))
             num = []
-        elif byte in '\t\r\n':
+        elif byte in b'\t\r\n':
             pass
-        elif byte in '0123456789abcdef':
+        elif byte in b'0123456789abcdef':
             num.append(byte)
         else:
             assert False, byte
 
-    return ''.join(data)
+    return b''.join(data)
 
 
 if __name__ == '__main__':
