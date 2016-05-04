@@ -1,5 +1,6 @@
 """
-Example GoCollect wsgi server that stores the collected items in a filesystem tree.
+Example GoCollect wsgi server that stores the collected items in a
+filesystem tree.
 
 Default storage location: ``/srv/data/gocollect``
 
@@ -145,7 +146,10 @@ class Registrar(DirectoryMixin):
         # TODO: Read body and determine whether we've seen this host before?
         # Should then fetch and return old regid? Ignore for now.
         self.seenip = seenip
-        self.data = bodyfp.read(bodylen)
+        if bodylen is None:
+            self.data = _read_chunked(bodyfp)
+        else:
+            self.data = bodyfp.read(bodylen)
 
     def register(self):
         self.regid = str(uuid.uuid4())
@@ -168,7 +172,11 @@ class Collector(DirectoryMixin):
         return self.get_datalink(self.collectkey)
 
     def write_temp(self):
-        body = self.bodyfp.read(self.bodylen)
+        if self.bodylen is None:
+            body = _read_chunked(self.bodyfp)
+        else:
+            body = self.bodyfp.read(self.bodylen)
+
         temp = tempfile.NamedTemporaryFile(
             dir=self.get_keydir(), delete=False)
         try:
@@ -231,7 +239,6 @@ def application(environ, start_response):
     method = environ['REQUEST_METHOD']
     uri = environ['PATH_INFO']  # PATH_INFO is application-specific REQUEST_URI
     source = environ['REMOTE_ADDR']
-    length = int(environ.get('CONTENT_LENGTH') or '0')
 
     if method == 'HEAD':
         start_response('200 OK', [])
@@ -241,6 +248,10 @@ def application(environ, start_response):
         # FIXME: confirm that this is https?
         # FIXME: do auth? :)
         # FIXME: do we allow the user to pass a different IP? perhaps we do
+        if environ.get('CONTENT_LENGTH', '').isdigit():
+            length = int(environ['CONTENT_LENGTH'])
+        else:
+            length = None
 
         if uri == '/register/':
             registrar = Registrar(source, length, environ['wsgi.input'])
@@ -282,5 +293,53 @@ def _is_file_equal(file1, file2):
                 if not buf1:
                     break
     return True
+
+
+def _read_chunked(fp):
+    data = []
+    num = []
+    while True:
+        byte = fp.read(1)
+        if num and byte == '\n':
+            length = int(''.join(num), 16)
+            if not length:
+                break
+
+            data.append(fp.read(length))
+            num = []
+        elif byte in '\t\r\n':
+            pass
+        elif byte in '0123456789abcdef':
+            num.append(byte)
+        else:
+            assert False, byte
+
+    return ''.join(data)
+
+
+if __name__ == '__main__':
+    # Quick and dirty WSGI test server on port 8000.
+    from traceback import print_exc
+    from wsgiref.simple_server import make_server
+
+    def wrapped_application(environ, start_response):
+        """
+        Wrap application and do custom error handling. The wsgiref (at
+        least Python 2.7) error handling is broken and reports other
+        errors down the line.
+        """
+        try:
+            for item in application(environ, start_response):
+                yield item
+        except:
+            print_exc()
+            start_response(
+                '503 Broken Stuff', [('Content-Type', 'application/json')])
+            yield '{"error": "Broken Stuff"}'
+
+    port = 8000
+    httpd = make_server('', port, wrapped_application)
+    print('Serving on port {0}...'.format(port))
+    httpd.serve_forever()
 
 # vim: set ts=8 sw=4 sts=4 et ai:

@@ -3,7 +3,8 @@
 # register_url: Specify URL where to register this GoCollect instance.
 #   You can skip the register-step by prepopulating
 #   /var/lib/gocollect/core.id.regid with a valid key.
-register_url = https://example-tld/register/
+#push_url = https://example.com/register/
+register_url = http://localhost:8000/register/
 
 # push_url: Specify URL where to post the data.
 #   The {ip4} and {fqdn} parameters are taken from the core.id script.
@@ -14,8 +15,8 @@ register_url = https://example-tld/register/
 #   For now, we've decided to do without auth on the collector server.
 #   We won't do automatic billing based on the imported values and the
 #   source IP is used as an additional identifier.
-#push_url = https://example.com/path/{ip4}/{fqdn}/{_collector}/
-push_url = https://example-tld/update/{regid}/{_collector}/
+#push_url = https://example.com/update/{ip4}/{fqdn}/{_collector}/
+push_url = http://localhost:8000/update/{regid}/{_collector}/
 
 # collectors_path: Specify one or more paths where the collectors can
 #   be found.
