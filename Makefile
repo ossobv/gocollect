@@ -78,7 +78,10 @@ debian-depends:
 TGZ_CONFIG_MD5 = $(shell test -n "$$TGZ_CONFIG" && md5sum /etc/gocollect.conf | sed -e 's/\(.......\).*/\1/')
 TGZ_VERSION = $(VERSION)$(shell test -n "$(TGZ_CONFIG_MD5)" && echo "-md5conf-$(TGZ_CONFIG_MD5)")
 
-# TGZ_CONFIG=/etc/gocollect.conf make tgz ==> "gocollect-v0.4~dev-8-g3494-with-conf-c0f48c3.tar.gz"
+# TGZ_CONFIG=/etc/gocollect.conf make tgz ==> "gocollect-v0.4~dev-8-g3494-md5conf-c0f48c3.tar.gz"
+# wget -qO- http://.../gocollect-v0.4~dev-8-g3494-md5conf-c0f48c3.tar.gz | tar -xzvC /
+# if ! which timeout; then printf '#!/bin/sh\nshift; exec "$@"\n' > /usr/bin/timeout; chmod 755 /usr/bin/timeout; fi
+# /etc/init.d/gocollect start
 .PHONY: tgz
 tgz: gocollect-$(TGZ_VERSION).tar.gz
 
