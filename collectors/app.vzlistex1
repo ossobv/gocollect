@@ -1,0 +1,12 @@
+#!/bin/bash
+# OPTIONAL
+echo "["
+n=0
+vzlist -H 2>/dev/null | while read l; do
+  arr=($l)
+  props=`pvectl print "${arr[0]}" | sed -e '1d;s/\([^:]*\): \(.*\)/"\1":"\2",/g'`
+  test $n -gt 0 && echo ,
+  n=$((n+1))
+  echo "{$props\"ctid\":${arr[0]},\"nproc\":${arr[1]},\"status\":\"${arr[2]}\",\"ip\":\"${arr[3]}\",\"hostname\":\"${arr[4]}\"}"
+done
+echo "]"

@@ -1,0 +1,54 @@
+#!/bin/bash
+# OPTIONAL
+
+has_key() {
+	local e
+	for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+	return 1
+}
+
+valtodict() {
+	for kv in `echo "$*" | tr , ' '`; do
+		IFS='=' arr=($kv)
+		key=${arr[0]}
+		value=${arr[1]}
+		if test -z "$value"; then
+			value=true
+		else
+			value="\"$value\""
+		fi
+		echo -n ",\"$key\":$value"
+	done | sed -e 's/^,/{/;s/$/}/'
+}
+
+echo "["
+n=0
+used_keys=()
+ps h -o cmd -p `pidof kvm | tr ' ' ,` 2>/dev/null | while read kvmcmd; do
+	all='*'
+	optkey=
+	test $n -gt 0 && echo -n ,
+	n=$((n+1))
+	for cmd in $kvmcmd; do
+		case $cmd in
+		$all)
+			echo -n "{\"argv0\":\"$cmd\""
+			bin=$cmd
+			all=
+			;;
+		-*)
+			test -n "$optkey" && echo -n ",\"$optkey\":true"
+			optkey="${cmd:1}"
+			has_key "$optkey" "${used_keys[@]}" && optkey="${optkey}_${n}"
+			used_keys+=($optkey)
+			;;
+		*)
+			echo -n ",\"$optkey\":`valtodict "$cmd"`"
+			optkey=
+			;;
+		esac
+	done
+	test -n "$optkey" && echo -n ",\"$optkey\":true"
+	echo ",\"argv_all\":\"$kvmcmd\"}"
+done
+echo "]"

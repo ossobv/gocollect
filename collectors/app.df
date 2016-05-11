@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "["
+n=0
+df -B1048576 | sed -e1d | while read line; do
+	arr=($line)
+	test $n -gt 0 && echo -n ,
+	n=$((n+1))
+	echo "{\"device\":\"${arr[0]}\",\"size\":${arr[1]},\"used\":${arr[2]},\"mountpoint\":\"${arr[5]}\",\"unit\":\"MB\"}"
+done
+echo "]"
