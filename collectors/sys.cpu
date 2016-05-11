@@ -4,11 +4,19 @@
 # REQUIRES: sed(sed)
 # REQUIRES: util-linux(lscpu)
 
-lscpu=`lscpu`
-arch=`echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//'`
-cpus=`echo "$lscpu" | sed -e '/^CPU(s)/!d;s/^[^:]*: *//'`
-cores=`echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//'`
-name=`echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
-      tr '\n' ' ' | sed -e 's/ $//'`
+lscpu=`lscpu 2>/dev/null`
+if test -n "$lscpu"; then
+	arch=`echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//'`
+	cpus=`echo "$lscpu" | sed -e '/^CPU(s)/!d;s/^[^:]*: *//'`
+	cores=`echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//'`
+	name=`echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
+	      tr '\n' ' ' | sed -e 's/ $//'`
+else
+	arch=?
+	cpus=`grep '^processor[[:blank:]]*:' /proc/cpuinfo | wc -l`
+	cores=`grep '^cpu cores[[:blank:]]*:' /proc/cpuinfo | head -n1 | sed -e 's/.* //'`
+	name=`grep -E '^(vendor_id|model|model name)[[:blank:]]*:' /proc/cpuinfo | head -n3 |
+	      sed -e 's/^[^:]*: //' | tr '\n' ' ' | sed -e 's/  */ /g;s/^ *//;s/ *$//'`
+fi
 printf '{"arch":"%s","cores":"%s","cpus":"%s","product":"%s"}\n' \
     "$arch" "$cores" "$cpus" "$name"
