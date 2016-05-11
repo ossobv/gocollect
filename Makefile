@@ -75,6 +75,31 @@ debian-depends:
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo
 
 
+TGZ_CONFIG_MD5 = $(shell test -n "$$TGZ_CONFIG" && md5sum /etc/gocollect.conf | sed -e 's/\(.......\).*/\1/')
+TGZ_VERSION = $(VERSION)$(shell test -n "$(TGZ_CONFIG_MD5)" && echo "-md5conf-$(TGZ_CONFIG_MD5)")
+
+# TGZ_CONFIG=/etc/gocollect.conf make tgz ==> "gocollect-v0.4~dev-8-g3494-with-conf-c0f48c3.tar.gz"
+.PHONY: tgz
+tgz: gocollect-$(TGZ_VERSION).tar.gz
+
+gocollect-$(TGZ_VERSION).tar.gz: gocollect
+	# Supply TGZ_CONFIG=/path/to/gocollect.conf in env to copy that
+	# config into the tarball.
+	$(RM) -r tmp/gocollect-tgz
+	mkdir -p tmp/gocollect-tgz
+	$(MAKE) DESTDIR=$(CURDIR)/tmp/gocollect-tgz install-gocollect install-collectors
+	install -D -m0644 gocollect.conf.sample $(CURDIR)/tmp/gocollect-tgz/etc/gocollect.conf.sample
+	if test -n "$$TGZ_CONFIG"; then install -D -m0644 "$$TGZ_CONFIG" $(CURDIR)/tmp/gocollect-tgz/etc/gocollect.conf; fi
+	install -D -m0755 rc/debian.sysv $(CURDIR)/tmp/gocollect-tgz/etc/init.d/gocollect
+	for n in 0 1 6; do mkdir -p $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d; \
+		ln -s ../init.d/gocollect $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d/K99gocollect; done
+	for n in 2 3 4 5; do mkdir -p $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d; \
+		ln -s ../init.d/gocollect $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d/S99gocollect; done
+	tar --owner=root --group=root -C tmp/gocollect-tgz -czf gocollect-$(TGZ_VERSION).tar.gz .
+	@echo
+	@echo "Created: gocollect-$(TGZ_VERSION).tar.gz"
+
+
 .PHONY: testrun
 testrun: gocollect
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
