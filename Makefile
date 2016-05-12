@@ -62,6 +62,8 @@ uninstall-rc:
 
 .PHONY: debian-depends
 debian-depends:
+	@# E: gocollect: needlessly-depends-on-awk depends
+	@# E: gocollect: depends-on-essential-package-without-using-version depends: bash
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: coreutils
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: debianutils
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: dpkg
@@ -69,16 +71,15 @@ debian-depends:
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: hostname
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: sed
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: util-linux
-	@# E: gocollect: needlessly-depends-on-awk depends
 	# NOTE: iproute2 is called iproute on older systems
 	# NOTE: kmod is called module-init-tools on older systems
 	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
 		`grep -LE '(LABELS.*optional|LABELS.*hardware-only)' $(COLLECTORS)` \
-		| grep -vE '^(awk|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
+		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (main)'
 	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
 		`grep -lE 'LABELS.*hardware-only' $(COLLECTORS)` \
-		| grep -vE '^(awk|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
+		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (hardware-only)'
 
 
