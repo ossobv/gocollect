@@ -95,17 +95,19 @@ tgz: gocollect-$(TGZ_VERSION).tar.gz
 gocollect-$(TGZ_VERSION).tar.gz: gocollect
 	# Supply TGZ_CONFIG=/path/to/gocollect.conf in env to copy that
 	# config into the tarball.
-	$(RM) -r tmp/gocollect-tgz
-	mkdir -p tmp/gocollect-tgz
-	$(MAKE) DESTDIR=$(CURDIR)/tmp/gocollect-tgz install-gocollect install-collectors
-	install -D -m0644 gocollect.conf.sample $(CURDIR)/tmp/gocollect-tgz/etc/gocollect.conf.sample
-	if test -n "$$TGZ_CONFIG"; then install -D -m0644 "$$TGZ_CONFIG" $(CURDIR)/tmp/gocollect-tgz/etc/gocollect.conf; fi
-	install -D -m0755 rc/debian.sysv $(CURDIR)/tmp/gocollect-tgz/etc/init.d/gocollect
-	for n in 0 1 6; do mkdir -p $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d; \
-		ln -s ../init.d/gocollect $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d/K99gocollect; done
-	for n in 2 3 4 5; do mkdir -p $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d; \
-		ln -s ../init.d/gocollect $(CURDIR)/tmp/gocollect-tgz/etc/rc$$n.d/S99gocollect; done
-	tar --owner=root --group=root -C tmp/gocollect-tgz -czf gocollect-$(TGZ_VERSION).tar.gz .
+	$(RM) -r tmp-gocollect-tgz
+	mkdir -p tmp-gocollect-tgz
+	$(MAKE) DESTDIR=$(CURDIR)/tmp-gocollect-tgz install-gocollect install-collectors
+	install -D -m0644 gocollect.conf.sample $(CURDIR)/tmp-gocollect-tgz/etc/gocollect.conf.sample
+	if test -n "$$TGZ_CONFIG"; then install -D -m0644 "$$TGZ_CONFIG" $(CURDIR)/tmp-gocollect-tgz/etc/gocollect.conf; fi
+	install -D -m0755 rc/debian.sysv $(CURDIR)/tmp-gocollect-tgz/etc/init.d/gocollect
+	for n in 0 1 6; do mkdir -p $(CURDIR)/tmp-gocollect-tgz/etc/rc$$n.d; \
+		ln -s ../init.d/gocollect $(CURDIR)/tmp-gocollect-tgz/etc/rc$$n.d/K99gocollect; done
+	for n in 2 3 4 5; do mkdir -p $(CURDIR)/tmp-gocollect-tgz/etc/rc$$n.d; \
+		ln -s ../init.d/gocollect $(CURDIR)/tmp-gocollect-tgz/etc/rc$$n.d/S99gocollect; done
+	if ! tar --owner=root --group=root -C tmp-gocollect-tgz -czf gocollect-$(TGZ_VERSION).tar.gz .; then \
+		$(RM) gocollect-$(TGZ_VERSION).tar.gz; false; fi
+	$(RM) -r tmp-gocollect-tgz
 	@echo
 	@echo "Created: gocollect-$(TGZ_VERSION).tar.gz"
 
