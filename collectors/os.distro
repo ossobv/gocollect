@@ -1,6 +1,8 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(printf uname)
+# REQUIRES: apt(apt-cache)
+# REQUIRES: coreutils(head printf uname)
+# REQUIRES: lsb-release(lsb_release)
 # REQUIRES: sed(sed)
 
 output=`lsb_release -a 2>/dev/null`

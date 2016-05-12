@@ -1,0 +1,20 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: awk(awk)
+#
+# The sys.storage collector fetches device info, including disk serials.
+# This only collects mount points, filesystem types and byte/inode limits.
+
+echo "["
+output=`df -B1048576 --output=fstype,itotal,size,source,target 2>/dev/null |
+        awk 'BEGIN{i=0}{if(i){if(i>1)print ",";print \
+             "{\"type\":\"" $1 "\",\"inodes\":" $2 ",\"megabytes\":" $3 \
+             ",\"source\":\"" $4 "\",\"target\":\"" $5 "\"}"}i+=1}'`
+if test -n "$output"; then
+    echo "$output"
+else
+    df -B1048576 |
+    awk 'BEGIN{i=0}{if(i){if(i>1)print ",";print "{\"source\":\"" $1 \
+            "\",\"megabytes\":" $2 ",\"target\":\"" $6 "\"}"}i+=1}'
+fi
+echo "]"

@@ -1,5 +1,9 @@
 #!/bin/bash
-# OPTIONAL
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: bash(bash)
+# REQUIRES: procps(ps)
+# REQUIRES: sysvinit-utils(pidof)
 
 has_key() {
 	local e

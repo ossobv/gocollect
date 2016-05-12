@@ -1,6 +1,6 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(printf tr)
+# REQUIRES: coreutils(head printf tr uname wc)
 # REQUIRES: sed(sed)
 # REQUIRES: util-linux(lscpu)
 
@@ -12,10 +12,10 @@ if test -n "$lscpu"; then
 	name=`echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
 	      tr '\n' ' ' | sed -e 's/ $//'`
 else
-	arch=?
-	cpus=`grep '^processor[[:blank:]]*:' /proc/cpuinfo | wc -l`
-	cores=`grep '^cpu cores[[:blank:]]*:' /proc/cpuinfo | head -n1 | sed -e 's/.* //'`
-	name=`grep -E '^(vendor_id|model|model name)[[:blank:]]*:' /proc/cpuinfo | head -n3 |
+	arch=`uname -p`
+	cpus=`sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l`
+	cores=`sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 | sed -e 's/.* //'`
+	name=`sed -e '/^\(vendor_id\|model\|model name\)[[:blank:]]*:/!d' /proc/cpuinfo | head -n3 |
 	      sed -e 's/^[^:]*: //' | tr '\n' ' ' | sed -e 's/  */ /g;s/^ *//;s/ *$//'`
 fi
 printf '{"arch":"%s","cores":"%s","cpus":"%s","product":"%s"}\n' \

@@ -1,5 +1,11 @@
 #!/bin/bash
-# OPTIONAL
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: awk(awk)
+# REQUIRES: bash(bash)
+# REQUIRES: pve-manager(pvectl)
+# REQUIRES: vzctl(vzlist)
+
 echo "["
 n=0
 vzlist -H 2>/dev/null | while read l; do

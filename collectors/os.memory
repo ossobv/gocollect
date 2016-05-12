@@ -1,4 +1,7 @@
 #!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: procps(free)
+# REQUIRES: sed(sed)
 
 memory=`free -m | sed -e '/^Mem:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//'`
 swap=`free -m | sed -e '/^Swap:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//'`

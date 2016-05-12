@@ -1,4 +1,8 @@
 #!/bin/sh
-# OPTIONAL
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: awk(awk)
+# REQUIRES: vzctl(vzlist)
+
 vzlist -H 2>/dev/null |
   awk 'BEGIN{print "[";i=0}{if(i)print ",";i=1;print "{\"ctid\":" $1 ",\"nproc\":" $2 ",\"status\":\"" $3 "\",\"ip\":\"" $4 "\",\"hostname\":\"" $5 "\"}"}END{print "]"}'

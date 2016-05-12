@@ -1,5 +1,6 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: hardware-only
 # REQUIRES: coreutils(printf sort tr)
 # REQUIRES: debianutils(which)
 # REQUIRES: sed(sed)
