@@ -1,8 +1,8 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: coreutils(cut)
-# REQUIRES: openssh-client(ssh-keygen)
 # REQUIRES: sed(sed)
+# SUGGESTS: openssh-client(ssh-keygen)
 
 list_keys() {
     # Older ssh-keygen will only show the fingerprint of a single key.
