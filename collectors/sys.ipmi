@@ -21,8 +21,8 @@ devs=`find /dev -name 'ipmi*' 2>/dev/null | wc -l`
 if test $devs -gt 0; then
     ipmitool lan print | sed -re '
             /^ /d
-            s/^([^:]*[^: ]+) *: (.*[^ ]+) *$/"\1":"\2",/;$s/,$/}/
-            1s/^/{/'
+            s/^([^:]*[^: ]+) *: (.*[^ ]+) *$/"\1":"\2",/' |
+            sed -e '1s/^/{/;$s/,$/}/'
 else
     echo '{"error":"No ipmi devices found"}'
 fi
