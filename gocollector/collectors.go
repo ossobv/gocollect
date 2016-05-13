@@ -60,9 +60,21 @@ func (c *Collectors) Run(key string) Collected {
         return nil
     }
 
-    // TODO: point stderr to somewhere?
-    cmd := exec.Command("timeout", "180s", execpath)
+    // Check if there is a timeout binary before defaulting to using it.
+    cmd := exec.Command("timeout", "1s", "/bin/true")
     stdout, e := cmd.Output()
+
+    if e == nil {
+        // TODO: point stderr to somewhere?
+        cmd = exec.Command("timeout", "180s", execpath)
+        stdout, e = cmd.Output()
+    } else {
+        // Go without timeout.
+        logger.Printf(
+            "collector[%s]: no timeout binary found to use", key)
+        cmd = exec.Command(execpath)
+        stdout, e = cmd.Output()
+    }
 
     // If the process returned non-zero, then err is non-nil.  However,
     // if we're using filters in the command, then we will probably get
