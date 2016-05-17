@@ -1,6 +1,6 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(tr)
+# REQUIRES: coreutils(head tr)
 # REQUIRES: dmidecode(dmidecode)
 # REQUIRES: hostname(hostname)
 # REQUIRES: iproute2(ip)
@@ -33,7 +33,7 @@ json="\"fqdn\":\"$fqdn\""
 ip4=`ip route get 255.255.255.255 | sed -e '
      / dev /!d
      s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
-     s/ *//g'`
+     s/ *//g' | tr -d '[:cntrl:]"\\\\'`
 test -n "$ip4" && json="$json,\"ip4\":\"$ip4\""
 
 # regid: The UUID previously received when registering.
@@ -41,7 +41,7 @@ regid=`cat /var/lib/gocollect/core.id.regid 2>/dev/null`
 test -n "$regid" && json="$json,\"regid\":\"$regid\""
 
 # machine-id: Systemd style machine identification number.
-machineid=`cat /etc/machine-id 2>/dev/null`
+machineid=`cat /etc/machine-id 2>/dev/null | tr -d '[:cntrl:]"\\\\'`
 test -n "$machineid" && json="$json,\"machine-id\":\"$machineid\""
 
 # A bunch of values from dmidecode -t 1:
@@ -50,7 +50,8 @@ test -n "$machineid" && json="$json,\"machine-id\":\"$machineid\""
 # - system-manufacturer: Can be used by VM host to set customer name
 for key in system-manufacturer system-product-name system-version \
         system-serial-number system-uuid; do
-    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//;s/ *$//;/^#/d'`
+    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//;s/ *$//;/^#/d' |
+           head -n1 | tr -d '[:cntrl:]"\\\\'`
     if test -n "$value"; then
         if test "$key" = "system-uuid"; then
             value=`echo "$value" | tr '[:upper:]' '[:lower:]'`
