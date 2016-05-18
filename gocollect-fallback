@@ -1,0 +1,69 @@
+#!/bin/sh
+# Quick hack to collect data on machines where gocollect fails to work
+# because it's not x86_64 or has ancient libc.
+
+conf=/etc/gocollect.conf
+path=/usr/share/gocollect/collectors
+
+post() {
+    url="$1"
+    bindata=$(cat)
+    curl --insecure -XPOST --data-binary "$bindata" "$url"
+}
+
+log() {
+    logger -s -p daemon.warn "gocollect: $@"
+}
+
+run() {
+    reg_url=$(sed -e '/^register_url/!d;s/.*= *//' "$conf")
+    push_url=$(sed -e '/^push_url/!d;s/.*= *//' "$conf")
+    
+    core_id=$("$path/core.id")
+    regid=$(echo "$core_id" | sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
+    
+    if test -z "$regid"; then
+        data=$(echo "$core_id" | post "$reg_url")
+        regid=$(echo "$data" | sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
+        if test -z "$regid"; then
+            log "reg failure"
+            exit 1
+        fi
+        
+        mkdir -p /var/lib/gocollect
+        chmod 700 /var/lib/gocollect
+        echo "$regid" > /var/lib/gocollect/core.id.regid
+    
+        # Re-get core info. Check values.
+        core_id=$("$path/core.id")
+        regid=$(echo "$core_id" | sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
+        if test -z "$regid"; then
+            log "core.id reg load failure"
+            exit 1
+        fi
+    fi
+    
+    # Jobs
+    temp=$(mktemp)
+    find "$path" -maxdepth 1 -type f -perm -700 | while read job; do
+        log "$job: executing"
+        output=$("$job" 2>"$temp")
+        ret=$?
+        test $ret -ne 0 && log "$job: return code was $ret"
+        cat "$temp" | while read line; do
+            log "$job: (STDERR) $line"
+        done
+        if test -n "$output" && test $ret -eq 0; then
+            collector=$(basename "$job")
+            url=$(echo "$push_url" | sed -e "s/{regid}/$regid/g;s/{_collector}/$collector/g")
+            log "$job: push to $url"
+            echo "$output" | post "$url"
+        fi
+    done
+    rm -f "$temp"
+}
+
+while :; do
+    run
+    sleep 28800  # 8 hours
+done

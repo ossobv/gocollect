@@ -29,19 +29,26 @@ do_start()
     #   0 if daemon has been started
     #   1 if daemon was already running
     #   2 if daemon could not be started
-    if pgrep -P1 -x "$NAME" >/dev/null; then
+    if pgrep -P1 -x "$NAME" >/dev/null ||
+            pgrep -P1 -xf "/bin/sh ${DAEMON}-fallback" >/dev/null; then
         return 1
     else
         sh -c "$DAEMON $DAEMON_ARGS </dev/null >/dev/null 2>&1 &"  # disown
         sleep 1
         pid=$(pgrep -P1 -x "$NAME")
-        if test $? -eq 0; then
-            echo "$pid" > "$PIDFILE"
-        else
-            # Show what happens in the foreground.
-            $DAEMON $DAEMON_ARGS </dev/null
-            return 2
+        if test $? -ne 0; then
+            ## Show what happens in the foreground.
+            #$DAEMON $DAEMON_ARGS </dev/null
+
+            # Try again with fallback daemon.
+            sh -c "${DAEMON}-fallback </dev/null >/dev/null 2>&1 &"  # disown
+            sleep 1
+            pid=$(pgrep -P1 -xf "/bin/sh ${DAEMON}-fallback")
+            if test $? -ne 0; then
+                return 2
+            fi
         fi
+        echo "$pid" > "$PIDFILE"
         return 0
     fi
 }
@@ -53,7 +60,7 @@ do_status()
     # Return
     #   0 if daemon is running
     #   1 if daemon is not running
-    pid=$(pgrep -P1 -x "$NAME")
+    pid=$(pgrep -P1 -x "$NAME"; pgrep -P1 -xf "/bin/sh ${DAEMON}-fallback")
     if test -z "$pid"; then
         rm -f "$PIDFILE"
         return 1
