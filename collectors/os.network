@@ -1,65 +1,32 @@
-#!/bin/bash
+#!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: bash(bash)
+# REQUIRES: coreutils(cut)
 # REQUIRES: iproute2(ip)
+# REQUIRES: sed(sed)
 
-echo "{\"interfaces\":["
-
-n=0
-ip4=(); ip4bits=()
-ip6=(); ip6bits=()
-
-flush_ip46() {
-    echo -n ",\"ip4\":["
-    for idx in `seq 0 $((${#ip4[@]}-1))`; do
-        test $idx -gt 0 && echo -n ,
-        echo -n "{\"address\":\"${ip4[$idx]}\",\"bits\":${ip4bits[$idx]}}"
-    done
-    echo -n "],\"ip6\":["
-    for idx in `seq 0 $((${#ip6[@]}-1))`; do
-        test $idx -gt 0 && echo -n ,
-        echo -n "{\"address\":\"${ip6[$idx]}\",\"bits\":${ip6bits[$idx]}}"
+append_addresses() {
+    echo -n ",\"$2\":["
+    n2=0
+    ip addr show dev $1 | sed -ne 's/^[[:blank:]]*'"$3"' \([^ ]*\).*/\1/p' | while read line2; do
+        test $n2 -gt 0 && echo -n ,
+        n2=$((n2+1))
+        addr=$(echo "$line2" | cut -d/ -f1)
+        bits=$(echo "$line2" | cut -d/ -f2)
+        echo -n "{\"address\":\"$addr\",\"bits\":$bits}"
     done
     echo -n "]"
-    ip4=(); ip4bits=()
-    ip6=(); ip6bits=()
 }
 
-# With bash, the variables are available outside a while loop IFF we
-# pass an FD (not a process) to the while loop. Use a tempfile.
-temp=`mktemp`
-ip addr > "$temp"
-
-while read line; do
-    arr=($line)
-
-    case ${arr[0]} in
-    [0-9]*:)
-        test $n -gt 0 && flush_ip46 && echo "},"
-        n=$((n+1))
-        index=${arr[0]}
-        name=${arr[1]}
-        echo -n "{\"index\":\"${index%:}\",\"name\":\"${name%:}\""
-		;;
-    link/*)
-        echo -n ",\"mac\":\"${arr[1]}\""
-        ;;
-    inet)
-        ip=${arr[1]}
-        ip4bits+=(${ip#*/})
-        ip4+=(${ip%/*})
-        ;;
-    inet6)
-        ip=${arr[1]}
-        ip6bits+=(${ip#*/})
-        ip6+=(${ip%/*})
-        ;;
-    *)
-        ;;
-    esac
-done < "$temp"
-rm "$temp"
-
-flush_ip46
-
+echo "{\"interfaces\":["
+n=0
+ip link | sed -e '/^[[:blank:]]/d;s/://g;s/ <.*//' | while read line; do
+    test $n -gt 0 && echo "},"
+    n=$((n+1))
+    index=$(echo "$line" | cut -d' ' -f1)
+    name=$(echo "$line" | cut -d' ' -f2)
+    mac=$(ip link show dev $name | sed -ne 's/^[[:blank:]]*link\/[^ ]* \([^ ]*\).*/\1/p')
+    echo -n "{\"index\":\"${index%:}\",\"name\":\"${name%:}\",\"mac\":\"$mac\""
+    append_addresses $name ip4 inet
+    append_addresses $name ip6 inet6
+done
 echo "}]}"  # ip addr must return something, or it's very broken
