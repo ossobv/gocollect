@@ -27,13 +27,15 @@ valtodict() {
 
 echo "["
 n=0
-used_keys=()
 ps h -o cmd -p `pidof kvm qemu-system-x86_64 | tr ' ' ,` 2>/dev/null | while read kvmcmd; do
 	all='*'
 	optkey=
 	test $n -gt 0 && echo -n ,
 	n=$((n+1))
+	used_keys=()
+	n2=0
 	for cmd in $kvmcmd; do
+		n2=$((n2+1))
 		case $cmd in
 		$all)
 			echo -n "{\"argv0\":\"$cmd\""
@@ -43,7 +45,7 @@ ps h -o cmd -p `pidof kvm qemu-system-x86_64 | tr ' ' ,` 2>/dev/null | while rea
 		-*)
 			test -n "$optkey" && echo -n ",\"$optkey\":true"
 			optkey="${cmd:1}"
-			has_key "$optkey" "${used_keys[@]}" && optkey="${optkey}_${n}"
+			has_key "$optkey" "${used_keys[@]}" && optkey="${optkey}_${n2}"
 			used_keys+=($optkey)
 			;;
 		*)
