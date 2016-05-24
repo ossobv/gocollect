@@ -7,6 +7,15 @@
 # REQUIRES: sed(sed)
 # NOTE: Remember to test changes with mawk(1).
 
+# Joining the parsed (array/list) version is as simple as this:
+#
+#     def join(array):
+#         if isinstance(array[-1], str):
+#             return '.'.join(str(i) for i in array[0:-1]) + array[-1]
+#         return '.'.join(str(i) for i in array)
+#
+# You'll lose the debian epoch, but I don't think we'll need that.
+
 dpkg -l | awk '
     BEGIN { printf "{\"installed\":{"; i=0 }
     /^ii/ {
