@@ -16,13 +16,16 @@ dpkg -l | awk '
         # drop optional debian epoch
         gsub("^[0-9]+:", "", version);
         # surround non-numeric tail with dquotes
-        match(version, "^[0-9.]+")
+        match(version, "^[0-9]+([.][0-9]+)*")
         if (length(version) != RLENGTH) {
-            version = substr(version, 1, RLENGTH) ".\"" substr(version, RLENGTH + 1) "\""
+            tail = ",\"" substr(version, RLENGTH + 1) "\""
+            version = substr(version, 1, RLENGTH)
+        } else {
+            tail = ""
         }
-        # replace dots with commas (incl. duplicates)
-        gsub("[.]+", ",", version)
-        print "\"" $2 "\":[" version "]"
+        # replace dots with commas
+        gsub("[.]", ",", version)
+        print "\"" $2 "\":[" version tail "]"
     }
     END { print "},\"sources\":[" }' |
     sed -e 's/\([^0-9]\)0\+\([0-9]\)/\1\2/g'
