@@ -5,7 +5,8 @@
 # REQUIRES: dpkg(dpkg)
 # REQUIRES: findutils(find)
 # REQUIRES: sed(sed)
-# NOTE: Remember to test changes with mawk(1).
+# NOTE: Remember to test changes with mawk(1) (different than --posix).
+# NOTE: mawk does not do char-classes (like [:blank:]).
 
 # Joining the parsed (array/list) version is as simple as this:
 #
@@ -16,31 +17,77 @@
 #
 # You'll lose the debian epoch, but I don't think we'll need that.
 
-dpkg -l | awk '
-    BEGIN { printf "{\"installed\":{"; i=0 }
-    /^ii/ {
-        if (i) printf ","
-        i += 1
-        version = $3
-        # drop optional debian epoch
-        gsub("^[0-9]+:", "", version);
-        # surround non-numeric tail with dquotes
-        match(version, "^[0-9]+([.][0-9]+)*")
-        if (length(version) != RLENGTH) {
-            tail = ",\"" substr(version, RLENGTH + 1) "\""
-            version = substr(version, 1, RLENGTH)
-        } else {
-            tail = ""
+echo '{"installed":{'
+awk '
+BEGIN { RS = "\n\n" }
+/Status: install ok installed/ {
+    arraylen = split($0, array, "\n")
+    name = ""
+    version = ""
+    source = ""
+    source_version = ""
+    for (idx = 1; idx <= arraylen; idx++) {
+        key = getkey(array[idx])
+        if (key == "Package") {
+            name = getvalue(array[idx])
+        } else if (key == "Version") {
+            version = versiontojson(getvalue(array[idx]))
+        } else if (key == "Source") {
+            source = getvalue(array[idx])
+            if (index(source, "(")) {
+                source_version = source
+                sub("^.*[(]", "", source_version)
+                sub("[)] *$", "", source_version)
+                sub(" *[(].*$", "", source)
+                source_version = versiontojson(source_version)
+            }
         }
-        # replace dots with commas
-        gsub("[.]", ",", version)
-        print "\"" $2 "\":[" version tail "]"
     }
-    END { print "},\"sources\":[" }' |
-    sed -e 's/\([^0-9]\)0\+\([0-9]\)/\1\2/g'
-    # ^ this last sed here drops leading 0's in number (and in other
-    # data). This is needed because the go Json compactor doesn't like
-    # leading zeroes.
+    if (name && version) {
+        printf "\"%s\":{\"version\":[%s]", name, version
+        if (source) printf ",\"source\":\"%s\"", source
+        if (source_version) printf ",\"source_version\":[%s]", source_version
+        print "}"
+    }
+}
+# (arguments after three spaces are locals, not arguments)
+function getkey(keyvalue,   colon, nonspace) {
+    nonspace = match(keyvalue, "[^ \t]")
+    colon = index(keyvalue, ":")
+    return substr(keyvalue, nonspace, colon - nonspace)
+}
+function getvalue(keyvalue,   colon, nonspace) {
+    colon = index(keyvalue, ":")
+    keyvalue = substr(keyvalue, colon + 1)
+    nonspace = match(keyvalue, "[^ \t]")
+    return substr(keyvalue, nonspace)
+}
+function versiontojson(version,   array, arraylen, idx, tail) {
+    # drop optional debian epoch
+    sub("^[0-9]+:", "", version);
+    # surround non-numeric tail with dquotes
+    match(version, "^[0-9]+([.][0-9]+)*")
+    if (length(version) != RLENGTH) {
+        tail = ",\"" substr(version, RLENGTH + 1) "\""
+        version = substr(version, 1, RLENGTH)
+    } else {
+        tail = ""
+    }
+    # Replace dots with commas, replace 0[1-9] with [1-9].
+    arraylen = split(version, array, ".")
+    version = ""
+    for (idx = 1; idx <= arraylen; idx++) {
+        sub("^0+", "", array[idx])
+        sub("^$", "0", array[idx])
+        if (idx > 1) version = version ","
+        version = version array[idx]
+    }
+    return version tail
+}
+' /var/lib/dpkg/status | LC_ALL=C sort | sed -e '2,$s/^/,/'
+echo '}'
+
+echo ',"repositories":['
 LC_ALL=C sort `
     find /etc/apt/sources.list /etc/apt/sources.list.d \
         -name '*.list' -o -name '*.sources'` |
