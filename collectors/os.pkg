@@ -24,6 +24,7 @@ BEGIN { RS = "\n\n" }
     arraylen = split($0, array, "\n")
     name = ""
     version = ""
+    number = ""
     source = ""
     source_version = ""
     for (idx = 1; idx <= arraylen; idx++) {
@@ -31,7 +32,8 @@ BEGIN { RS = "\n\n" }
         if (key == "Package") {
             name = getvalue(array[idx])
         } else if (key == "Version") {
-            version = versiontojson(getvalue(array[idx]))
+            version = getvalue(array[idx])
+            number = versiontojson(version)
         } else if (key == "Source") {
             source = getvalue(array[idx])
             if (index(source, "(")) {
@@ -39,14 +41,13 @@ BEGIN { RS = "\n\n" }
                 sub("^.*[(]", "", source_version)
                 sub("[)] *$", "", source_version)
                 sub(" *[(].*$", "", source)
-                source_version = versiontojson(source_version)
             }
         }
     }
     if (name && version) {
-        printf "\"%s\":{\"version\":[%s]", name, version
+        printf "\"%s\":{\"number\":[%s],\"version\":\"%s\"", name, number, version
         if (source) printf ",\"source\":\"%s\"", source
-        if (source_version) printf ",\"source_version\":[%s]", source_version
+        if (source_version) printf ",\"source_version\":\"%s\"", source_version
         print "}"
     }
 }
@@ -62,18 +63,15 @@ function getvalue(keyvalue,   colon, nonspace) {
     nonspace = match(keyvalue, "[^ \t]")
     return substr(keyvalue, nonspace)
 }
-function versiontojson(version,   array, arraylen, idx, tail) {
+function versiontojson(version,   array, arraylen, idx) {
     # drop optional debian epoch
     sub("^[0-9]+:", "", version);
     # surround non-numeric tail with dquotes
     match(version, "^[0-9]+([.][0-9]+)*")
     if (length(version) != RLENGTH) {
-        tail = ",\"" substr(version, RLENGTH + 1) "\""
         version = substr(version, 1, RLENGTH)
-    } else {
-        tail = ""
     }
-    # Replace dots with commas, replace 0[1-9] with [1-9].
+    # replace dots with commas, replace 0[1-9] with [1-9]
     arraylen = split(version, array, ".")
     version = ""
     for (idx = 1; idx <= arraylen; idx++) {
@@ -82,7 +80,7 @@ function versiontojson(version,   array, arraylen, idx, tail) {
         if (idx > 1) version = version ","
         version = version array[idx]
     }
-    return version tail
+    return version
 }
 ' /var/lib/dpkg/status | LC_ALL=C sort | sed -e '2,$s/^/,/'
 echo '}'
