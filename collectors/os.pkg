@@ -33,7 +33,7 @@ BEGIN { RS = "\n\n" }
             name = getvalue(array[idx])
         } else if (key == "Version") {
             version = getvalue(array[idx])
-            number = versiontojson(version)
+            number = versionasnumlist(version)
         } else if (key == "Source") {
             source = getvalue(array[idx])
             if (index(source, "(")) {
@@ -63,14 +63,12 @@ function getvalue(keyvalue,   colon, nonspace) {
     nonspace = match(keyvalue, "[^ \t]")
     return substr(keyvalue, nonspace)
 }
-function versiontojson(version,   array, arraylen, idx) {
+function versionasnumlist(version,   array, arraylen, idx) {
     # drop optional debian epoch
     sub("^[0-9]+:", "", version);
-    # surround non-numeric tail with dquotes
+    # drop non-numeric tail
     match(version, "^[0-9]+([.][0-9]+)*")
-    if (length(version) != RLENGTH) {
-        version = substr(version, 1, RLENGTH)
-    }
+    if (length(version) != RLENGTH) version = substr(version, 1, RLENGTH)
     # replace dots with commas, replace 0[1-9] with [1-9]
     arraylen = split(version, array, ".")
     version = ""
