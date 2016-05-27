@@ -171,7 +171,8 @@ func main() {
     gocollector.SetLog(logger)
     for {
         ret := gocollector.CollectAndPostData(
-            registerUrl, pushUrl, collectorsPaths, regidFilename)
+            registerUrl, pushUrl, collectorsPaths, regidFilename,
+            versionStr)
         if oneShot {
             if !ret {
                 log.Fatal("CollectAndPostData returned false")

@@ -8,7 +8,8 @@ path=/usr/share/gocollect/collectors
 post() {
     url="$1"
     bindata=$(cat)
-    curl --insecure -XPOST --data-binary "$bindata" "$url"
+    curl --insecure -XPOST --data-binary "$bindata
+" "$url"  # enter here to enforce trailing LF
 }
 
 log() {
@@ -42,17 +43,34 @@ run() {
             exit 1
         fi
     fi
+
+    # Patch core_id with our version.
+    self_version=$(md5sum < "$0" 2>/dev/null | tr -d '\t -')
+    self_version="fallback-md5-$self_version"
+    core_id=$(echo "$core_id" | sed -e '/^[[:blank:]]*$/d' |
+              sed -e '1s/{/{"gocollect":"'$self_version'",/')
     
     # Jobs
     temp=$(mktemp)
     find "$path" -maxdepth 1 -type f -perm -700 | while read job; do
-        log "$job: executing"
-        output=$("$job" 2>"$temp")
-        ret=$?
-        test $ret -ne 0 && log "$job: return code was $ret"
-        cat "$temp" | while read line; do
-            log "$job: (STDERR) $line"
-        done
+        case "$job" in
+        */core.id)
+            # No need to fetch it again. And besides, we patched it
+            # above to contain the version as well.
+            output="$core_id"
+            ret=0
+            ;;
+        *)
+            log "$job: executing"
+            output=$("$job" 2>"$temp")
+            ret=$?
+            test $ret -ne 0 && log "$job: return code was $ret"
+            cat "$temp" | while read line; do
+                log "$job: (STDERR) $line"
+            done
+            ;;
+        esac
+
         if test -n "$output" && test $ret -eq 0; then
             collector=$(basename "$job")
             url=$(echo "$push_url" | sed -e "s/{regid}/$regid/g;s/{_collector}/$collector/g")

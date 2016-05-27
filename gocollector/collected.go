@@ -5,6 +5,7 @@ package gocollector
 import (
     "bytes"
     "encoding/json"
+    "errors"
     "io"
     "strings"
 )
@@ -17,6 +18,9 @@ type Collected interface {
     // Methods that operate on the JSON dictionary.
     GetString(key string) string
     BuildString(template string, extra *map[string]string) string
+
+    // Methods that alter the JSON dictionary.
+    SetString(key string, value string) error
 }
 
 type CollectedData struct {
@@ -64,6 +68,44 @@ func (c *CollectedData) GetString(key string) string {
         return val
     }
     return ""
+}
+
+// Add/update a single string value in a Collected object.
+// Data:        {"fqdn":"1.2.3.4","regid":"12345"}
+// Key:         gocollect
+// Value:       1.2.3
+// Returns:     error or updates Data to look like this:
+//              {"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
+func (c *CollectedData) SetString(key string, value string) error {
+    // Check that no one has started reading already.
+    if c.readpos != 0 {
+        return errors.New("Cannot alter collected data after read")
+    }
+
+    decoded := make(map[string]string)
+    e := json.Unmarshal([]byte(c.data), &decoded)
+    if e != nil {
+        return e
+    }
+
+    // Add/update the value.
+    decoded[key] = value
+
+    // NOTE: We assume here that:
+    // (a) Marshal compacts the data.
+    // (b) There is no non-string value in core.id, because if there was
+    //     our unmarshal above would have ignored it (right?).
+    data, e := json.Marshal(decoded)
+    if e != nil {
+        return e
+    }
+
+    compacted := new(bytes.Buffer)
+    compacted.Write(data)
+    compacted.WriteByte('\n')
+    c.data = compacted.String()
+
+    return nil
 }
 
 // Long version of GetString: here you supply a string with {key} pieces

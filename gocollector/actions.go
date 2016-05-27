@@ -13,7 +13,8 @@ import (
 )
 
 func CollectAndPostData(registerUrl string, pushUrl string,
-                        collectorsPaths []string, regidFilename string) bool {
+                        collectorsPaths []string, regidFilename string,
+                        gocollectVersion string) bool {
 
     // Collect all collectors based on the supplied paths.
     collectors := NewFromPaths(collectorsPaths)
@@ -26,6 +27,9 @@ func CollectAndPostData(registerUrl string, pushUrl string,
     if coreIdData == nil {
         return false
     }
+
+    // Patch core.id with our version.
+    coreIdData.SetString("gocollect", gocollectVersion)
 
     // Check if we need to register first.
     regid := coreIdData.GetString("regid")
@@ -53,7 +57,18 @@ func CollectAndPostData(registerUrl string, pushUrl string,
     // Run all collectors and push.
     extraContext := map[string]string{"_collector": "<value>"}
     for _, collectorKey := range collectors.Runnable() {
-        collected := collectors.Run(collectorKey)
+        var collected Collected
+
+        switch collectorKey {
+        case "core.id":
+            // No need to fetch it again. And besides, we patched it
+            // above to contain the version as well.
+            collected = coreIdData
+        default:
+            // Exec the collector.
+            collected = collectors.Run(collectorKey)
+        }
+
         if collected == nil {
             //logger.Printf("collector[%s]: exec fail", collectorKey)
             continue
@@ -127,8 +142,8 @@ func register(registerUrl string, coreIdData Collected,
     return true
 }
 
-func push(pushUrl string, coreIdData Collected) bool {
-    data, err := httpPost(pushUrl, coreIdData)
+func push(pushUrl string, collectedData Collected) bool {
+    data, err := httpPost(pushUrl, collectedData)
     if err != nil {
         logger.Printf("push[%s]: failed: %s", pushUrl, err)
         return false
