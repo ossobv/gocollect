@@ -4,6 +4,7 @@
 
 conf=/etc/gocollect.conf
 path=/usr/share/gocollect/collectors
+version=  # gets set before it's put into a tgz package
 
 post() {
     url="$1"
@@ -45,8 +46,12 @@ run() {
     fi
 
     # Patch core_id with our version.
-    self_version=$(md5sum < "$0" 2>/dev/null | tr -d '\t -')
-    self_version="fallback-md5-$self_version"
+    if test -n "$version"; then
+        self_version="$version.fallback"
+    else
+        self_version=$(md5sum < "$0" 2>/dev/null | tr -d '\t -')
+        self_version="fallback-md5-$self_version"
+    fi
     core_id=$(echo "$core_id" | sed -e '/^[[:blank:]]*$/d' |
               sed -e '1s/{/{"gocollect":"'$self_version'",/')
     

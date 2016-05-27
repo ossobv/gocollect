@@ -110,6 +110,7 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect
 	mkdir -p tmp-gocollect-tgz
 	$(MAKE) DESTDIR=$(CURDIR)/tmp-gocollect-tgz install-gocollect install-collectors
 	install -D gocollect-fallback $(CURDIR)/tmp-gocollect-tgz/usr/sbin/gocollect-fallback
+	sed -i -e 's/^version=[[:blank:]].*/version="$(VERSION)"/' $(CURDIR)/tmp-gocollect-tgz/usr/sbin/gocollect-fallback
 	install -D -m0644 gocollect.conf.sample $(CURDIR)/tmp-gocollect-tgz/etc/gocollect.conf.sample
 	if test -n "$$TGZ_CONFIG"; then install -D -m0644 "$$TGZ_CONFIG" $(CURDIR)/tmp-gocollect-tgz/etc/gocollect.conf; fi
 	install -D -m0755 rc/generic.sysv $(CURDIR)/tmp-gocollect-tgz/etc/init.d/gocollect
