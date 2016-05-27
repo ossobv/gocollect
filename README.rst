@@ -78,6 +78,30 @@ Pre-release development versions shall be called ``v1.3_dev`` which
 sorts before ``v1.3_rc1``, which in turn sorts before ``v1.3``.
 
 
+Packaging a tarball
+-------------------
+
+To to create a tarball with the latest version, including a config file,
+do this:
+
+.. code-block:: console
+
+    $ TGZ_CONFIG=/path/to/gocollect.conf make tgz
+    ...
+    Created: gocollect-v0.4~rc6+1.g83d4-md5conf-c0f48c3.tar.gz
+
+You can then extract and run that archive on the target machine like
+this:
+
+.. code-block:: console
+
+    $ cat gocollect-v0.4~rc6+1.g83d4-md5conf-c0f48c3.tar.gz | sudo tar -xzvC /
+    $ sudo /etc/init.d/gocollect start
+
+You may need to install additional dependencies first to get all
+collectors to work properly. For example ``smartmontools`` or
+``ipmitool``.
+
 
 Golang notes to self
 --------------------
