@@ -14,8 +14,10 @@ list_keys() {
     while read line; do
         echo "$line" > "$tmp"
         # Only echo stdout if zero status.
-        out=`ssh-keygen -E sha512 -lf "$tmp" 2>/dev/null` && echo "$out"
-        out=`ssh-keygen -lf "$tmp" 2>/dev/null` && echo "$out"
+        out=`ssh-keygen -E sha512 -lf "$tmp" 2>/dev/null` &&
+            echo "$out" | sed -e "s#$tmp#/tmp/tempfile#g"
+        out=`ssh-keygen -lf "$tmp" 2>/dev/null` &&
+            echo "$out" | sed -e "s#$tmp#/tmp/tempfile#g"
     done
     rm "$tmp"
 }
