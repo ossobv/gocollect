@@ -34,6 +34,8 @@ And install prerequisites::
 TODO list
 ---------
 
+- remove double spaces in sys.storage product
+- debian-depends on same-version-of-gocollect-or-higher?
 - network-whitelist on the REST server
 - redo debian-depends stuff
 - add manpage
