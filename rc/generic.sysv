@@ -40,8 +40,18 @@ do_start()
             ## Show what happens in the foreground.
             #$DAEMON $DAEMON_ARGS </dev/null
 
+            # If possible, clean the environment of the fallback daemon
+            # before starting. This avoids issues like LC_ALL being set
+            # and altering the output of some commands.
+            if env -i /bin/true 2>/dev/null; then
+                CLEARENV=env -i
+            else
+                CLEARENV=
+            fi
+
             # Try again with fallback daemon.
-            sh -c "${DAEMON}-fallback </dev/null >/dev/null 2>&1 &"  # disown
+            $CLEARENV sh -c \
+                "${DAEMON}-fallback </dev/null >/dev/null 2>&1 &"  # disown
             sleep 1
             pid=$(pgrep -P1 -xf "/bin/sh ${DAEMON}-fallback")
             if test $? -ne 0; then
