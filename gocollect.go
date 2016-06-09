@@ -168,6 +168,7 @@ func main() {
     }
 
     // Time for some action.
+    os.Chdir("/")
     gocollector.SetLog(logger)
     for {
         ret := gocollector.CollectAndPostData(

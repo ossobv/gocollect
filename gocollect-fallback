@@ -86,7 +86,8 @@ run() {
     rm -f "$temp"
 }
 
+cd /
 while :; do
     run
-    sleep 28800  # 8 hours
+    sleep 14400  # 4 hours
 done
