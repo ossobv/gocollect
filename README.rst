@@ -36,8 +36,6 @@ TODO list
 
 Doing now:
 
-- [packaging] Have gocollect packages depend on same-version-of-gocollect-or-higher?
-- [packaging] Redo debian-depends makefile helpers. More automation.
 - [server] Network whitelist.
 - [server] Consolidate Jelle-code, RabbitMQ-code into this repo.
 
@@ -49,11 +47,15 @@ Not doing now:
 - [client] Optional background job for pushing authlogs?
   ``journalctl -f -l SYSLOG_FACILITY=4 -o json``
 - [client] Inotify (or similar) to watch changes.
+- [packaging] Redo debian-depends makefile helpers. More automation.
 
 Not doing ever:
 
 - [client] Variable random extra sleep. It's preferable to know when to expect
   updates over easing (the little extra) load on the servers.
+- [packaging] Have gocollect packages depend on same-version-of-gocollect-or-
+  higher? We could do that, but the only advantage it offers is less typing
+  for manual updates. And it's more work when creating the new package.
 
 
 Packaging for Debian
