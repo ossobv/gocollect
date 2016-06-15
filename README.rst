@@ -36,7 +36,8 @@ TODO list
 
 Doing now:
 
-- [client] Add manpage.
+- [collectors] Add yum/rpm support for os.dpkg.
+- [collectors] Fix os.kernel version numbers.
 - [packaging] Have gocollect packages depend on same-version-of-gocollect-or-higher?
 - [packaging] Redo debian-depends makefile helpers. More automation.
 - [server] Network whitelist.
@@ -44,6 +45,9 @@ Doing now:
 
 Not doing now:
 
+- [docs] Docs from manpage into README. More docs about installing on
+  non-standard systems through make tgz.
+- [client] Fix so the installer prefers /usr/local by default.
 - [client] Optional background job for pushing authlogs?
   ``journalctl -f -l SYSLOG_FACILITY=4 -o json``
 - [client] Inotify (or similar) to watch changes.

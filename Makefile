@@ -34,6 +34,7 @@ install: install-gocollect install-collectors install-rc
 install-gocollect: gocollect
 	@echo "Preparing to install binaries: $*"
 	install -D gocollect $(DESTDIR)$(prefix)/sbin/gocollect
+	gzip -c gocollect.8 >$(DESTDIR)$(prefix)/share/man/man8/gocollect.8.gz
 install-collectors: $(COLLECTORS)
 	@echo "Preparing to install collectors: $^"
 	install -d $(DESTDIR)$(prefix)/share/gocollect/collectors

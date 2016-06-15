@@ -1,0 +1,97 @@
+.\" Manpage for gocollect. Don't forget to update this.
+.TH GOCOLLECT "8" "June 2016" "OSSO gocollect" "System Manager's Manual"
+.SH NAME
+gocollect \- collect system info and push to a central server
+.SH SYNOPSIS
+.B gocollect
+[\fI\,OPTION\/\fR]...
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+GoCollect collects various pieces of system info and publishes them to
+a central server.
+
+.TP
+\fB\-c\fR \fI\,CONFIG\/\fR, \fB\-\-config=\fR\fI\,CONFIG\/\fR
+path to configuration file; uses
+.IR /etc/gocollect.conf
+if not specified
+.TP
+\fB\-s\fR, \fB\-\-one\-shot\fR
+run once in the foreground and exit
+.TP
+\fB\-\-without\-root\fR
+override the check that prevents you from running gocollect as
+non-privileged user; the check ensures you don't accidentally push empty
+data to the server because you forgot to run as root
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+display help and exit
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+output version and license information and exit
+
+.PP
+The intent of GoCollect is to create a map of your servers with rarely
+changing data items. Where you may use Cacti, Collectd, Nagios or Zabbix
+for near-realtime monitoring of integer values like current CPU usage,
+you use GoCollect to collect values like hard drive serial numbers, IPMI
+IP-addresses and versions of installed OS packages.
+
+.PP
+The collectors (commonly) found in /usr/share/gocollect/collectors are
+a set of executable scripts with minimal dependencies that output valid
+JSON data. That data is periodically pushed \[em] at startup, and then every
+four hours \[em] to the central server defined in the config file.
+
+.SH "EXAMPLE CONFIG"
+.PP
+A sample
+.IR /etc/gocollect.conf
+looks like this:
+
+.nf
+register_url = https://example.com/register/
+# Any of the keys from core.id collected JSON dict is available for use
+# in the push_url template. Additionally {_collector} is replaced with
+# the collector basename.
+push_url = http://example.com/update/{regid}/{_collector}/
+collectors_path = /usr/share/gocollect/collectors
+collectors_path = /usr/local/share/gocollect/collectors
+.fi
+
+Multiple
+.IR collectors_path
+entries may be provided. Files found
+in later paths will override earlier ones. Only files with the
+executable bit are processed. That means you can disable a packaged
+collector locally, by creating a non-executable file in a local path
+listed later.
+
+.SH COMPATIBILITY
+.PP
+GoCollect is primarily targeted at Debian and derivatives, but it can be
+deployed on other systems as well. The daemon software is written in Go
+(1.6 or higher), but for ancient systems or unsupported architectures, a
+.I gocollect-fallback
+script written in Bourne Shell is supplied. Please check the full
+documentation in the GoCollect source (README, Makefile) for more
+information.
+.PP
+You can safely run the individual collectors by hand to check the
+compatibility with your system.
+
+.SH AUTHOR
+Written by Walter Doekes.
+.SH "REPORTING BUGS"
+Bugs can be reported on the GitHub issue tracker:
+<https://github.com/ossobv/gocollect>
+.SH COPYRIGHT
+Copyright \(co 2016 OSSO B.V.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH "SEE ALSO"
+Full documentation is here:
+<https://github.com/ossobv/gocollect/blob/master/README.rst>
