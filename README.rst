@@ -38,6 +38,7 @@ Doing now:
 
 - [server] Network whitelist.
 - [server] Consolidate Jelle-code, RabbitMQ-code into this repo.
+- [server] Replace absolute symlinks with relative ones in the file store.
 
 Not doing now:
 
