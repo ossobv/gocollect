@@ -4,6 +4,9 @@
 # REQUIRES: sed(sed)
 
 name=`uname --kernel-name`
-version=`uname --kernel-release |
-         sed -e 's/\([0-9.]\+\)\(.*\)/\1."\2"/;s/\.""$//;s/\./,/g'`
-printf '{"name":"%s","version":[%s]}\n' "$name" "$version"
+version=`uname --kernel-release`
+number=`echo "$version" |
+        sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
+                s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
+printf '{"name":"%s","number":[%s],"version":"%s"}\n' \
+    "$name" "$number" "$version"

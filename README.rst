@@ -37,7 +37,7 @@ TODO list
 Doing now:
 
 - [collectors] Add yum/rpm support for os.dpkg.
-- [collectors] Fix os.kernel version numbers.
+- [collectors] Add centos os.distro support.
 - [packaging] Have gocollect packages depend on same-version-of-gocollect-or-higher?
 - [packaging] Redo debian-depends makefile helpers. More automation.
 - [server] Network whitelist.

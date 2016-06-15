@@ -8,12 +8,10 @@
 output=`lsb_release -a 2>/dev/null`
 name=`echo "$output" |
       sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//'`
-version=`echo "$output" | sed -e '
-            /^Release/!d;s/^[^:]*:[[:blank:]]*//
-            s/\([0-9.]\+\)\(.*\)/\1."\2"/
-            s/\.""$//
-            s/\./,/g
-            s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
+version=`echo "$output" | sed -e '/^Release:/!d;s/[^:]*:[[:blank:]]*//'`
+number=`echo "$version" |
+        sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
+                s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
 codename=`echo "$output" |
           sed -e '/^Codename/!d;s/^[^:]*:[[:blank:]]*//'`
 comment=`echo "$output" |
@@ -23,5 +21,5 @@ if test -z "$codename"; then
 	codename=`apt-cache policy dpkg | sed -e '/http:\/\//!d;s/.*http:\/\/[^ ]*  *//;s/\/.*//' | head -n1`
 fi
 
-printf '{"name":"%s","version":[%s],"codename":"%s","comment":"%s"}\n' \
-    "$name" "$version" "$codename" "$comment"
+printf '{"name":"%s","number":[%s],"version":"%s","codename":"%s","comment":"%s"}\n' \
+    "$name" "$number" "$version" "$codename" "$comment"
