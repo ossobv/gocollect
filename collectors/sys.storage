@@ -29,7 +29,7 @@ uniq_by_prefix() {
 devices=`(
     smartctl --scan | sed -e 's/ *[[#].*//'
     lsblk -no TYPE,NAME | sed -e '/^disk/!d;s/[^ ]* */\/dev\//'
-) | sort | uniq_by_prefix`
+) | LC_ALL=C sort | uniq_by_prefix`
 
 
 device_n=0

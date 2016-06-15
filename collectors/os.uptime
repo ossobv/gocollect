@@ -16,6 +16,6 @@ get_t0() {
     done | sort | uniq -c | sort -rn | sed -ne 's/.* \([^ ]*\)$/\1/p;q'
 }
 
-t0=`get_t0`
+t0=`LC_ALL=C get_t0`
 d0=`TZ=UTC LC_ALL=C date --date @$t0 --rfc-2822`
 echo "{\"unixtime\":\"$t0\",\"rfc2822\":\"$d0\"}"

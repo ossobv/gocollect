@@ -25,10 +25,10 @@ list_keys() {
 echo '{"ssh":['
 (
     # Guess authorized_keys in <homedir>/.ssh
-    cut -d: -f6 /etc/passwd | sort -u | sed -e 's#$#/.ssh/authorized_keys#'
+    cut -d: -f6 /etc/passwd | LC_ALL=C sort -u | sed -e 's#$#/.ssh/authorized_keys#'
     # Find authorized_keys files in /etc/ssh for ecryptfs systems.
     find /etc/ssh -name authorized_keys
-) | sort -u | while read file; do
+) | LC_ALL=C sort -u | while read file; do
     # Readable non-empty file? If not, move to next.
     test -s "$file" || continue
 
