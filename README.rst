@@ -37,7 +37,6 @@ TODO list
 Doing now:
 
 - [client] Add manpage.
-- [collectors] Remove double spaces in sys.storage product.
 - [packaging] Have gocollect packages depend on same-version-of-gocollect-or-higher?
 - [packaging] Redo debian-depends makefile helpers. More automation.
 - [server] Network whitelist.
