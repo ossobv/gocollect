@@ -34,14 +34,25 @@ And install prerequisites::
 TODO list
 ---------
 
-- remove double spaces in sys.storage product
-- debian-depends on same-version-of-gocollect-or-higher?
-- network-whitelist on the REST server
-- redo debian-depends stuff
-- add manpage
-- background job for pushing authlogs?
-  journalctl -f -l SYSLOG_FACILITY=4 -o json
-- fix gocollect -V license/version
+Doing now:
+
+- [client] Add manpage.
+- [collectors] Remove double spaces in sys.storage product.
+- [packaging] Have gocollect packages depend on same-version-of-gocollect-or-higher?
+- [packaging] Redo debian-depends makefile helpers. More automation.
+- [server] Network whitelist.
+- [server] Consolidate Jelle-code, RabbitMQ-code into this repo.
+
+Not doing now:
+
+- [client] Optional background job for pushing authlogs?
+  ``journalctl -f -l SYSLOG_FACILITY=4 -o json``
+- [client] Inotify (or similar) to watch changes.
+
+Not doing ever:
+
+- [client] Variable random extra sleep. It's preferable to know when to expect
+  updates over easing (the little extra) load on the servers.
 
 
 Packaging for Debian
