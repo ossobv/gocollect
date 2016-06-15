@@ -88,8 +88,9 @@ LC_ALL=C sort `
 elif test -d /var/lib/rpm; then
 
 echo '{"installed":{'
-rpm -qa | sed -e 's/|//g;s/-\([0-9]\)/|\1/' | sort -u | awk '
-BEGIN { FS="|"; i=0 }
+rpm -qa --qf '%{NAME} %{EPOCH}:%{VERSION}-%{RELEASE}\n' | sort -u |
+sed -e 's/ (none):/ /g' | awk '
+BEGIN { i=0 }
 {
     if (i) printf ","
     i += 1
