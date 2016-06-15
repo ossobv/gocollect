@@ -44,7 +44,7 @@ do_start()
             # before starting. This avoids issues like LC_ALL being set
             # and altering the output of some commands.
             if env -i /bin/true 2>/dev/null; then
-                CLEARENV=env -i
+                CLEARENV="env -i PATH=$PATH"
             else
                 CLEARENV=
             fi

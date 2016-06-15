@@ -54,6 +54,21 @@ func (c *Collectors) Runnable() (keys []string) {
 }
 
 func (c *Collectors) Run(key string) Collected {
+    // Create a clean environment without LC_ALL to mess up output.
+    // But make sure there is a valid path so we can find useful
+    // binaries like ip(1).
+    pathEnv := os.Getenv("PATH")
+    if pathEnv == "" {
+        pathEnv = (
+            "PATH=/usr/local/sbin:/usr/local/bin:" +
+            "/usr/sbin:/usr/bin:/sbin:/bin")
+    } else {
+        pathEnv = "PATH=" + pathEnv
+    }
+    cleanEnv := []string{pathEnv}
+
+    // Check if there is a binary path; it's empty if it's non-
+    // executable, which is a hint that we shouldn't run it.
     execpath := (*c)[key]
     if execpath == "" {
         logger.Printf("collector[%s]: no execpath", key)
@@ -62,20 +77,20 @@ func (c *Collectors) Run(key string) Collected {
 
     // Check if there is a timeout binary before defaulting to using it.
     cmd := exec.Command("timeout", "1s", "/bin/true")
-    cmd.Env = []string{}  // don't pollute env with LC_* and other vars
+    cmd.Env = cleanEnv
     stdout, e := cmd.Output()
 
     if e == nil {
         // TODO: point stderr to somewhere?
         cmd = exec.Command("timeout", "180s", execpath)
-        cmd.Env = []string{}  // don't pollute env with LC_* and other vars
+        cmd.Env = cleanEnv
         stdout, e = cmd.Output()
     } else {
         // Go without timeout.
         logger.Printf(
             "collector[%s]: no timeout binary found to use", key)
         cmd = exec.Command(execpath)
-        cmd.Env = []string{}  // don't pollute env with LC_* and other vars
+        cmd.Env = cleanEnv
         stdout, e = cmd.Output()
     }
 
