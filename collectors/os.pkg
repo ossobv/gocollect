@@ -8,14 +8,8 @@
 # NOTE: Remember to test changes with mawk(1) (different than --posix).
 # NOTE: mawk does not do char-classes (like [:blank:]).
 
-# Joining the parsed (array/list) version is as simple as this:
-#
-#     def join(array):
-#         if isinstance(array[-1], str):
-#             return '.'.join(str(i) for i in array[0:-1]) + array[-1]
-#         return '.'.join(str(i) for i in array)
-#
-# You'll lose the debian epoch, but I don't think we'll need that.
+#== DPKG ==============================================================#
+if test -f /var/lib/dpkg/status; then
 
 echo '{"installed":{'
 awk '
@@ -89,3 +83,36 @@ LC_ALL=C sort `
         -name '*.list' -o -name '*.sources'` |
     sed -e '/^deb /!d;s/^/"/;s/$/",/' |
     sed -e '$s/,$/]}/'
+
+#== RPM ===============================================================#
+elif test -d /var/lib/rpm; then
+
+echo '{"installed":{'
+rpm -qa | sed -e 's/|//g;s/-\([0-9]\)/|\1/' | sort -u | awk '
+BEGIN { FS="|"; i=0 }
+{
+    if (i) printf ","
+    i += 1
+    print "\"" $1 "\":{\"number\":[" versionasnumlist($2) "],\"version\":\"" $2 "\"}"
+}
+function versionasnumlist(version,   array, arraylen, idx) {
+    # drop optional debian epoch
+    sub("^[0-9]+:", "", version);
+    # drop non-numeric tail
+    match(version, "^[0-9]+([.][0-9]+)*")
+    if (length(version) != RLENGTH) version = substr(version, 1, RLENGTH)
+    # replace dots with commas, replace 0[1-9] with [1-9]
+    arraylen = split(version, array, ".")
+    version = ""
+    for (idx = 1; idx <= arraylen; idx++) {
+        sub("^0+", "", array[idx])
+        sub("^$", "0", array[idx])
+        if (idx > 1) version = version ","
+        version = version array[idx]
+    }
+    return version
+}
+'
+echo '}}'
+
+fi
