@@ -22,8 +22,8 @@ clean:
 
 gocollect: $(SOURCES)
 	go build $(GOLDFLAGS) gocollect.go
-	# Test version in gocollect -V output; if it's not there, the
-	# build it broken for all intents and purposes.
+	# Test version in gocollect -V output; if it's not there, we
+	# should consider the build broken.
 	VERSION_FROM_BIN=`./gocollect -V | sed -e '1!d;s/.* //'`; \
 		if test "$$VERSION_FROM_BIN" != "$(VERSION)"; then \
 		echo "gocollect -V output fail: $$VERSION_FROM_BIN is not $(VERSION)" >&2 \
