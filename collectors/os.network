@@ -10,23 +10,27 @@ append_addresses() {
     ip addr show dev $1 | sed -ne 's/^[[:blank:]]*'"$3"' \([^ ]*\).*/\1/p' | while read line2; do
         test $n2 -gt 0 && echo -n ,
         n2=$((n2+1))
-        addr=$(echo "$line2" | cut -d/ -f1)
-        bits=$(echo "$line2" | cut -d/ -f2)
+        if test "${line2%/*}" = "${line2}"; then
+            addr=$line2
+            bits=32
+        else
+            addr=${line2%%/*}
+            bits=${line2#*/}
+        fi
         echo -n "{\"address\":\"$addr\",\"bits\":$bits}"
     done
     echo -n "]"
 }
 
-echo "{\"interfaces\":["
-n=0
+echo "{\"interfaces\":{"
 ip link | sed -e '/^[[:blank:]]/d;s/://g;s/ <.*//' | while read line; do
-    test $n -gt 0 && echo "},"
-    n=$((n+1))
     index=$(echo "$line" | cut -d' ' -f1)
     name=$(echo "$line" | cut -d' ' -f2)
-    mac=$(ip link show dev $name | sed -ne 's/^[[:blank:]]*link\/[^ ]* \([^ ]*\).*/\1/p')
-    echo -n "{\"index\":\"${index%:}\",\"name\":\"${name%:}\",\"mac\":\"$mac\""
-    append_addresses $name ip4 inet
-    append_addresses $name ip6 inet6
-done
-echo "}]}"  # ip addr must return something, or it's very broken
+    namenoat=${name%%@*}
+    mac=$(ip link show dev $namenoat | sed -ne 's/^[[:blank:]]*link\/[^ ]* \([^ ]*\).*/\1/p')
+    echo -n "\"${name%:}\":{\"index\":${index%:},\"mac\":\"$mac\""
+    append_addresses $namenoat ip4 inet
+    append_addresses $namenoat ip6 inet6
+    echo "},"
+done | LC_ALL=C sort | sed -e '$s/,$//'
+echo "}}"
