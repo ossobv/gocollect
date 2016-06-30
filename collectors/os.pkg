@@ -23,12 +23,12 @@ BEGIN { RS = "\n\n" }
     source_version = ""
     for (idx = 1; idx <= arraylen; idx++) {
         key = getkey(array[idx])
-        if (key == "Package") {
+        if (key == "Package" && !name) {
             name = getvalue(array[idx])
-        } else if (key == "Version") {
+        } else if (key == "Version" && !version) {
             version = getvalue(array[idx])
             number = versionasnumlist(version)
-        } else if (key == "Source") {
+        } else if (key == "Source" && !source) {
             source = getvalue(array[idx])
             if (index(source, "(")) {
                 source_version = source
