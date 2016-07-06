@@ -11,6 +11,13 @@
 #== DPKG ==============================================================#
 if test -f /var/lib/dpkg/status; then
 
+# We'll have to assume there is python if we want to fcntl/lockf.
+# See lockf.py for an explanation for this "while read x" madness.
+here=${0%/*}
+test "$here" = "$0" && here=.
+python "$here/lockf.py" 120 /var/lib/dpkg/lock /var/lib/apt/lists/lock |
+while read x; do
+
 echo '{"installed":{'
 awk '
 BEGIN { RS = "\n\n" }
@@ -83,6 +90,12 @@ LC_ALL=C sort `
         -name '*.list' -o -name '*.sources'` |
     sed -e '/^deb /!d;s/^/"/;s/$/",/' |
     sed -e '$s/,$/]}/'
+
+# End the lockf.py madness
+exit 64
+done
+test $? -ne 64 && echo "one or more failures (db locked?)" >&2 && exit 1
+exit 0
 
 #== RPM ===============================================================#
 elif test -d /var/lib/rpm; then
