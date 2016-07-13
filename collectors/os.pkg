@@ -15,7 +15,7 @@ if test -f /var/lib/dpkg/status; then
 # See lockf.py for an explanation for this "while read x" madness.
 here=${0%/*}
 test "$here" = "$0" && here=.
-python "$here/lockf.py" 120 /var/lib/dpkg/lock /var/lib/apt/lists/lock |
+python "$here/util/lockf.py" 120 /var/lib/dpkg/lock /var/lib/apt/lists/lock |
 while read x; do
 
 echo '{"installed":{'

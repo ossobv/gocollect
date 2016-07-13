@@ -39,7 +39,9 @@ install-gocollect: gocollect
 install-collectors: $(COLLECTORS)
 	@echo "Preparing to install collectors: $^"
 	install -d $(DESTDIR)$(prefix)/share/gocollect/collectors
-	install -t $(DESTDIR)$(prefix)/share/gocollect/collectors $^
+	install -m0755 -t $(DESTDIR)$(prefix)/share/gocollect/collectors $^
+	install -d $(DESTDIR)$(prefix)/share/gocollect/collectors/util
+	install -m0644 -t $(DESTDIR)$(prefix)/share/gocollect/collectors/util $(wildcard collectors/util/*)
 install-rc:
 	install -D -m0644 gocollect.conf.sample $(DESTDIR)/etc/gocollect.conf.sample
 	# The debian postinst scripts use invoke-rc.d to start/stop. On systemd

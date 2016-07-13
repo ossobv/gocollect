@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # This file is part of GoCollect as a means to lock the APT/DPKG databases.
 #
 # [dpkg:doc/frontend.txt]
@@ -36,4 +34,4 @@ signal.alarm(0)
 sys.stdout.write('LOCKED\n')
 sys.stdout.flush()
 outfp = sys.stdout.fileno()
-ret = select.select([outfp], [], [outfp])
+ret = select.select([outfp], [], [outfp])  # wait for stdout close

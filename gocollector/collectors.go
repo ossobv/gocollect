@@ -116,9 +116,13 @@ func (c *Collectors) Run(key string) Collected {
 }
 
 func isExecutable(fileinfo os.FileInfo) bool {
-    mode := fileinfo.Mode()
-    if (mode & 0111) != 0 {
-        return true
+    if (fileinfo.IsDir()) {
+        return false
     }
-    return false
+
+    mode := fileinfo.Mode()
+    if (mode & 0111) == 0 {
+        return false
+    }
+    return true
 }
