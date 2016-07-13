@@ -89,8 +89,8 @@ Running:
     $ gbp buildpackage -us -uc -sa \
         --git-debian-branch=debian --git-upstream-tag='v%(version)s'
 
-Note that release candidate versions must be tagged as ``v1.2_rc3``
-where in gbp rewrites the underscore is rewritten to a tilde.
+Note that release candidate versions must be tagged as ``v1.2_rc3``.
+gbp-buildpackage rewrites the underscore to a debian-style tilde.
 Pre-release development versions shall be called ``v1.3_dev`` which
 sorts before ``v1.3_rc1``, which in turn sorts before ``v1.3``.
 
