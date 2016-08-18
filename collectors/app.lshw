@@ -1,5 +1,6 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
 # REQUIRES: lshw(lshw)
 
 lshw -json </dev/null 2>/dev/null
