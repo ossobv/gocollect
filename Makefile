@@ -49,14 +49,14 @@ install-rc:
 	# Note that `initctl --version` checks the binary, and
 	# `initctl version` checks the backend. We want info on the latter for
 	# machines that have recently migrated (e.g. Ubuntu trusty->xenial).
-	if ! initctl --system version 2>&1; then
+	if ! initctl version 2>&1; then
 		install -D -m0755 rc/debian.sysv $(DESTDIR)/etc/init.d/gocollect; \
 		install -D -m0644 rc/systemd.service $(DESTDIR)/lib/systemd/system/gocollect.service; \
-		systemctl daemon-reload >/dev/null 2>&1 || true; \
+		systemctl daemon-reload >/dev/null 2>&1 && systemctl enable gocollect || true; \
 	fi
 	# The debian postinst scripts would invoke the SysV scripts as well as
 	# install the upstart script. Not nice. We need only one.
-	if initctl --system version >/dev/null 2>&1; then \
+	if initctl version >/dev/null 2>&1; then \
 		install -D -m0644 rc/upstart.conf $(DESTDIR)/etc/init/gocollect.conf; \
 	fi
 
