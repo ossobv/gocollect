@@ -14,24 +14,27 @@ VERSION = $(shell $(VERSION_FROM_DEB) || $(VERSION_FROM_GIT))
 GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
-.PHONY: all clean
-all: gocollect
+.PHONY: all clean gocollect-bin
+all: gocollect-bin
 
 clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
 	go build $(GOLDFLAGS) gocollect.go
-	# Test version in gocollect -V output; if it's not there, we
-	# should consider the build broken.
-	VERSION_FROM_BIN=`./gocollect -V | sed -e '1!d;s/.* //'`; \
+
+gocollect-bin: gocollect
+	# Test version in gocollect -V output; it must exist and match
+	# the expected git version.
+	@VERSION_FROM_BIN=$$(./gocollect -V | sed -e '1!d;s/.* //'); \
 		if test "$$VERSION_FROM_BIN" != "$(VERSION)"; then \
-		echo "gocollect -V output fail: $$VERSION_FROM_BIN is not $(VERSION)" >&2 \
-		$(RM) gocollect; false; else echo "Built version $(VERSION)"; fi
+		echo "gocollect -V output fail: '$$VERSION_FROM_BIN' is not '$(VERSION)'" >&2; \
+		echo "different version? run 'make clean' and try again" >&2; \
+		$(RM) gocollect; false; else echo "OK: gocollect $(VERSION)"; fi
 
 .PHONY: install install-gocollect install-collectors install-rc
 install: install-gocollect install-collectors install-rc
-install-gocollect: gocollect
+install-gocollect: gocollect-bin
 	@echo "Preparing to install binaries: $*"
 	install -D gocollect $(DESTDIR)$(prefix)/sbin/gocollect
 	install -d $(DESTDIR)$(prefix)/share/man/man8
@@ -110,7 +113,7 @@ TGZ_VERSION = $(VERSION)$(shell test -n "$(TGZ_CONFIG_MD5)" && echo "-md5conf-$(
 .PHONY: tgz
 tgz: gocollect-$(TGZ_VERSION).tar.gz
 
-gocollect-$(TGZ_VERSION).tar.gz: gocollect
+gocollect-$(TGZ_VERSION).tar.gz: gocollect-bin
 	# Supply TGZ_CONFIG=/path/to/gocollect.conf in env to copy that
 	# config into the tarball.
 	$(RM) -r tmp-gocollect-tgz
@@ -133,7 +136,7 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect
 
 
 .PHONY: testrun
-testrun: gocollect
+testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
 	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
 
