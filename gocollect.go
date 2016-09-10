@@ -13,7 +13,7 @@ import (
     "strings"
     "time"
     getopt "github.com/kesselborn/go-getopt"
-    "./gocollector"
+    "github.com/ossobv/gocollect/gocollector"
 )
 
 // Initialized by -X ldflag. (Should be const, but is not allowed by the
