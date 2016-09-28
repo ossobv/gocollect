@@ -3,7 +3,7 @@
 # REQUIRES: coreutils(head tr)
 # REQUIRES: dmidecode(dmidecode)
 # REQUIRES: hostname(hostname)
-# REQUIRES: iproute2(ip)
+# REQUIRES: iproute2(ip) | iproute(ip)
 # REQUIRES: sed(sed)
 #
 # NOTE: This one is special. The values are used in the communication of

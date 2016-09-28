@@ -91,13 +91,11 @@ debian-depends:
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: hostname
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: sed
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: util-linux
-	# NOTE: iproute2 is called iproute on older systems
-	# NOTE: kmod is called module-init-tools on older systems
-	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
+	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
 		`grep -LE '(LABELS.*optional|LABELS.*hardware-only)' $(COLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (main)'
-	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
+	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
 		`grep -lE 'LABELS.*hardware-only' $(COLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (hardware-only)'
