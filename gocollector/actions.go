@@ -12,9 +12,9 @@ import (
     "time"
 )
 
-func CollectAndPostData(registerUrl string, pushUrl string,
-                        collectorsPaths []string, regidFilename string,
-                        gocollectVersion string) bool {
+func CollectAndPostData(
+        registerUrl string, pushUrl string, collectorsPaths []string,
+        regidFilename string, apiKey string, gocollectVersion string) bool {
 
     // Collect all collectors based on the supplied paths.
     collectors := NewFromPaths(collectorsPaths)
@@ -28,8 +28,11 @@ func CollectAndPostData(registerUrl string, pushUrl string,
         return false
     }
 
-    // Patch core.id with our version.
+    // Patch core.id with our version and optional apiKey.
     coreIdData.SetString("gocollect", gocollectVersion)
+    if apiKey != "" {
+        coreIdData.SetString("gocollect-apikey", apiKey)
+    }
 
     // Check if we need to register first.
     regid := coreIdData.GetString("regid")

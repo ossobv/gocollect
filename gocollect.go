@@ -64,21 +64,21 @@ func parseArgsOrExit() (options map[string]getopt.OptionValue) {
         if e != nil {
             errstr = e.Error()
         }
-	fmt.Fprintf(
+        fmt.Fprintf(
             os.Stderr, "%s: %s\n\n%s\nSee --help for more info.\n",
             path.Base(os.Args[0]), errstr,
             strings.TrimSpace(optionDefinition.Usage()))
-	os.Exit(1)
+        os.Exit(1)
     } else if val, ok := options["version"]; ok && val.Bool {
         version()
-	os.Exit(0)
+        os.Exit(0)
     } else if len(passThrough) != 0 {
-	fmt.Fprintf(
+        fmt.Fprintf(
             os.Stderr,
             "%s: passthrough? %r\n\n%s\nSee --help for more info.\n",
             path.Base(os.Args[0]), passThrough,
             strings.TrimSpace(optionDefinition.Usage()))
-	os.Exit(1)
+        os.Exit(1)
     }
 
     if _, ok := options["config"]; !ok {
@@ -91,10 +91,10 @@ func parseArgsOrExit() (options map[string]getopt.OptionValue) {
 func parseConfigOrExit(filename string) (config configMap) {
     data, e := ioutil.ReadFile(filename)
     if e != nil {
-	fmt.Fprintf(
+        fmt.Fprintf(
             os.Stderr, "%s: %s\n\nSee --help for more info.\n",
             path.Base(os.Args[0]), e.Error())
-	os.Exit(1)
+        os.Exit(1)
     }
 
     config = configMap{}
@@ -125,18 +125,21 @@ func main() {
 
     // Passed options scan. Check that user is root.
     if os.Getuid() != 0 && !options["without-root"].Bool {
-	fmt.Fprintf(
+        fmt.Fprintf(
             os.Stderr,
             ("%s: Running gocollect as non-privileged user may " +
              "cause several\n" +
              "collectors to return too little info. Pass --without-root " +
              "to bypass this check.\n"),
             path.Base(os.Args[0]))
-	os.Exit(1)
+        os.Exit(1)
     }
 
     // Take options and config and extract relevant values.
-    var registerUrl, pushUrl string
+    var apiKey, registerUrl, pushUrl string
+    if keys, ok := config["api_key"]; ok {
+        apiKey = keys[len(keys) - 1] // must have len>=1
+    }
     if urls, ok := config["register_url"]; ok {
         registerUrl = urls[len(urls) - 1] // must have len>=1
     }
@@ -173,7 +176,7 @@ func main() {
     for {
         ret := gocollector.CollectAndPostData(
             registerUrl, pushUrl, collectorsPaths, regidFilename,
-            versionStr)
+            apiKey, versionStr)
         if oneShot {
             if !ret {
                 log.Fatal("CollectAndPostData returned false")
