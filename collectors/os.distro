@@ -1,40 +1,66 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: apt(apt-cache)
+# REQUIRES: base-files>=7.2(os-release) | lsb-release(lsb_release)
 # REQUIRES: coreutils(head printf uname)
-# REQUIRES: lsb-release(lsb_release)
 # REQUIRES: sed(sed)
 
-output=`lsb_release -a 2>/dev/null`
-if test $? -eq 0; then
-    name=`echo "$output" |
-          sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//'`
-    version=`echo "$output" | sed -e '/^Release:/!d;s/[^:]*:[[:blank:]]*//'`
-    number=`echo "$version" |
-            sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
-                    s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
-    codename=`echo "$output" |
-              sed -e '/^Codename/!d;s/^[^:]*:[[:blank:]]*//'`
-    comment=`echo "$output" |
-             sed -e '/^Description/!d;s/^[^:]*:[[:blank:]]*//;s/"//g'`
-elif test -f /etc/os-release; then
-    # https://www.freedesktop.org/software/systemd/man/os-release.html
+# https://www.freedesktop.org/software/systemd/man/os-release.html
+OSREL=/etc/os-release
+
+if test -r "$OSREL"; then
     # > /etc/os-release should be a relative symlink to
     # > /usr/lib/os-release, to provide compatibility with applications
     # > only looking at /etc.
-    name=`sed -e '/^NAME=/!d;s/^[^=]*=//;s/"//g' /etc/os-release`
-    version=`sed -e '/^VERSION=/!d;s/^[^=]*=//;s/"//g' /etc/os-release`
-    number=`echo "$version" |
-            sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
-                    s/\([^0-9]\)0\+\([0-9]\)/\1\2/g'`
-    codename=`sed -e '/^CPE_NAME=/!d;s/^[^=]*=//;s/"//g' /etc/os-release`
-    comment=`sed -e '/^PRETTY_NAME=/!d;s/^[^=]*=//;s/"//g' /etc/os-release`
-else
+
+    id=$(sed -e '/^ID=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+    name=$(sed -e '/^NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+    # (Note that os-release is not always updated on older debian
+    # (wheezy). But we can live with missing minor-version updates.)
+    version=$(sed -e '/^VERSION=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+    number=$(echo "$version" |
+             sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
+                     s/\([^0-9]\)0\+\([0-9]\)/\1\2/g')
+    for key in VERSION_CODENAME UBUNTU_CODENAME; do
+        codename=$(sed -e '/^'$key'=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+        test -n "$codename" && break
+    done
+    if test -z "$codename"; then
+        codename=$(sed -e '/^VERSION=/!d
+            s/^[^=]*="[^(,]*[(,] *\([A-Za-z]*\).*/\1/' "$OSREL" |
+            tr '[:upper:]' '[:lower:]')
+        if test -z "$codename"; then
+            codename=$(sed -e '/^CPE_NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+        fi
+    fi
+    comment=$(sed -e '/^PRETTY_NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+
+elif which lsb_release >/dev/null; then
+    output=$(lsb_release -a 2>/dev/null)
+    name=$(echo "$output" |
+           sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//')
+    id=$(echo "$name" | tr '[:upper:]' '[:lower:]')
+    version=$(echo "$output" |
+              sed -e '/^Release:/!d;s/[^:]*:[[:blank:]]*//')
+    number=$(echo "$version" |
+             sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
+                     s/\([^0-9]\)0\+\([0-9]\)/\1\2/g')
+    codename=$(echo "$output" |
+               sed -e '/^Codename/!d;s/^[^:]*:[[:blank:]]*//')
+    comment=$(echo "$output" |
+              sed -e '/^Description/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
+
+elif which apt-cache >/dev/null; then
     # Ancient Debians without lsb_release.
-    codename=`apt-cache policy dpkg |
-              sed -e '/http:\/\//!d;s/.*http:\/\/[^ ]*  *//;s/\/.*//' |
-              head -n1`
+    id=$(apt-cache policy dpkg |
+         sed -e '/http:\/\//!d;s#.*http://[^ ]*/\([^/]\+\)/\?  *.*#\1#' |
+         sort | head -n1)
+    codename=$(apt-cache policy dpkg |
+               sed -e '/http:\/\//!d;s#.*http://[^ ]*  *##;s#/.*##' |
+               sort | head -n1)
+
 fi
 
-printf '{"name":"%s","number":[%s],"version":"%s","codename":"%s","comment":"%s"}\n' \
-    "$name" "$number" "$version" "$codename" "$comment"
+printf '{"%s":"%s","%s":"%s","%s":[%s],"%s":"%s","%s":"%s","%s":"%s"}\n' \
+    id "$id" name "$name" number "$number" version "$version" \
+    codename "$codename" comments "$comment"
