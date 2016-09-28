@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+# For other, *and* systemd machines, we stop gocollect.
+if [ -x "/usr/sbin/invoke-rc.d" ]; then
+	# Manually added by dh_installinit
+	if [ -e "/etc/init/gocollect.conf" ]; then
+		# Older upstart.
+		# initctl: Unknown instance:
+		initctl stop gocollect 2>/dev/null || true
+	elif [ -x "/etc/init.d/gocollect" ]; then
+		# Systemd uses the init.d-script.
+		invoke-rc.d gocollect stop || exit $?
+	fi
+	# End automatically added section
+fi
+
+# Remove our junk.
+rm -f /etc/init/gocollect.conf || true
+rm -f /etc/init.d/gocollect || true
+rm -f /lib/systemd/system/gocollect.service || true
+
+#DEBHELPER#

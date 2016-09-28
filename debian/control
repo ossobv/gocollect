@@ -1,0 +1,45 @@
+Source: gocollect
+Section: net
+Priority: optional
+Maintainer: Walter Doekes <wjdoekes@osso.nl>
+# dh-systemd (>=1.5) for jessie ...
+Build-Depends: debhelper (>=9), golang (>=2:1.3) | golang-go (>=2:1.3)
+Standards-Version: 3.9.7
+Homepage: https://github.com/ossobv/gocollect
+#Vcs-Git: git://anonscm.debian.org/collab-maint/gocollect.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/gocollect.git
+
+Package: gocollect
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, apt, dmidecode,
+ iproute | iproute2, lsb-release, procps
+Description: Collect rarely changing system info for server mapping.
+ GoCollect collects various pieces of system info and publishes them to
+ a central server.
+ .
+ The intent of GoCollect is to create a map of your servers with slow
+ and never changing data items. Where you may use Zabbix for
+ semi-realtime monitoring of integer values like current CPU usage, you
+ use GoCollect to collect values like hard drive serial numbers, IPMI
+ IP-addresses and versions of installed OS packages.
+
+Package: gocollect-hardware
+Architecture: any
+Depends: ${misc:Depends}, gocollect, ipmitool, kmod | module-init-tools,
+ smartmontools
+Description: Collect rarely changing system info for server mapping.
+ GoCollect collects various pieces of system info and publishes them to
+ a central server.
+ .
+ This package contains optional hardware detection modules, not needed
+ on virtual machines.
+
+Package: gocollect-osso
+Architecture: all
+Depends: ${misc:Depends}, gocollect
+Provides: gocollect-config
+Description: OSSO-specific configuration files for GoCollect
+ GoCollect collects various pieces of system info and publishes them to
+ a central server.
+ .
+ This package contains the OSSO B.V. configuration files for GoCollect.

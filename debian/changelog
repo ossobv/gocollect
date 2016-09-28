@@ -1,0 +1,16 @@
+gocollect (0.4.0-1) stable; urgency=medium
+
+  * Create v0.4.0 release.
+    - Use iproute|iproute2 dependency for wheezy/jessie compat.
+    - Use module-init-tools|kmod dependency for precise-ubuntu.
+    - Don't depend on lshw explicitly because values from there are
+      not mandatory (and it flaps because of CPU-speed changes).
+  * Split up into three packages:
+    - gocollect - core
+    - gocollect-hardware - dependencies on things like ipmitools
+      (only needed on non-virtual hosts)
+    - gocollect-osso - common OSSO B.V. configuration
+  * Add 99gocollect-restart to apt.conf.d to auto-restart gocollect
+    after apt runs. (Don't fail if it fails.)
+
+ -- Walter Doekes <wjdoekes@osso.nl>  Wed, 28 Sep 2016 11:48:07 +0200

@@ -1,0 +1,66 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# tmp is auto-removed afterwards.
+	GOPATH=$(CURDIR)/debian/tmp/go go get github.com/kesselborn/go-getopt
+	GOPATH=$(CURDIR)/debian/tmp/go dh_auto_build
+
+override_dh_auto_install:
+	# Do the install manually below.
+	#dh_auto_install -- prefix=/usr
+
+override_dh_install:
+	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect install-gocollect
+
+override_dh_installmodules:
+	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect install-collectors
+	find $(CURDIR)/debian/gocollect/usr/share/gocollect/collectors -maxdepth 1 -type f -print0 | \
+	  xargs -0 grep -l 'LABELS:.*hardware-only' | xargs -d\\n $(RM) -v
+
+	# Hardware specifics.
+	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect-hardware install-collectors
+	find $(CURDIR)/debian/gocollect-hardware/usr/share/gocollect/collectors -maxdepth 1 -type f -print0 | \
+	    xargs -0 grep -L 'LABELS:.*hardware-only' | xargs -d\\n $(RM) -v
+	find $(CURDIR)/debian/gocollect-hardware/usr/share/gocollect/collectors \
+	    -mindepth 1 -maxdepth 1 -type d -print0 | \
+	    xargs -0 $(RM) -rv
+
+	# Create apt-auto-restart file.
+	mkdir -p $(CURDIR)/debian/gocollect/etc/apt/apt.conf.d
+	printf 'DPkg::Post-Invoke {"%s && if %s; then %s; fi; true"; };\n' \
+	    'service gocollect status >/dev/null' \
+	    '! service gocollect restart' \
+	    "echo '(suppressing gocollect restart failure)' >&2" \
+	    >$(CURDIR)/debian/gocollect/etc/apt/apt.conf.d/99gocollect-restart
+
+override_dh_installinit:
+	# Copy the rc files to the usr/share dir where we can copy them
+	# from during postinst.
+	mkdir -p $(CURDIR)/debian/gocollect/usr/share/gocollect/rc
+	cp -a rc/* $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/
+	# W: gocollect: script-not-executable usr/share/gocollect/rc/debian.sysv
+	chmod 755 $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/debian.sysv
+
+override_dh_installexamples:
+	# Copy the sample config
+	# (Yes, I know, this should be in usr/share, but you won't look
+	# for it there. Or this should use a *.local or *.d style config
+	# override.)
+	mkdir -p $(CURDIR)/debian/gocollect/etc
+	cp -a gocollect.conf.sample $(CURDIR)/debian/gocollect/etc/
+
+	# OSSO B.V. specifics.
+	mkdir -p $(CURDIR)/debian/gocollect-osso/etc
+	cp -a $(CURDIR)/debian/osso/* $(CURDIR)/debian/gocollect-osso/etc
+
+override_dh_builddeb:
+	# Compress .deb destination files with gzip instead of xz for
+	# compatibility with older Debian releases. See also
+	# debian/source/options for the source package.
+	dh_builddeb -- -Zgzip

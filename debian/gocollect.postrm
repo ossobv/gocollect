@@ -1,0 +1,36 @@
+#!/bin/sh
+set -e
+
+# For systemd machines, we remove the service.
+if [ -x "/usr/bin/deb-systemd-helper" ]; then
+	# Manually added by dh_systemd_enable
+	if [ "$1" = "remove" ]; then
+		if [ -x "/usr/bin/deb-systemd-helper" ]; then
+			deb-systemd-helper mask gocollect.service >/dev/null
+		fi
+	fi
+
+	if [ "$1" = "purge" ]; then
+		if [ -x "/usr/bin/deb-systemd-helper" ]; then
+			deb-systemd-helper purge gocollect.service >/dev/null
+			deb-systemd-helper unmask gocollect.service >/dev/null
+		fi
+	fi
+	# End manually added section
+fi
+
+# For other, *and* systemd machines, we call the sysv stuff.
+if [ -x "/usr/sbin/update-rc.d" ]; then
+	# Manually added by dh_installinit
+	if [ "$1" = "purge" ] ; then
+		update-rc.d gocollect remove >/dev/null || true
+	fi
+	# In case this system is running systemd, we make systemd reload the
+	# unit files to pick up changes.
+	if [ -d "/run/systemd/system" ] ; then
+		systemctl --system daemon-reload >/dev/null || true
+	fi
+	# End manully added section
+fi
+
+#DEBHELPER#

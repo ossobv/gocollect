@@ -1,0 +1,8 @@
+# We manage the init scripts through a directory in /usr/share and
+# copy the relevant ones using the preferred local init-method.
+# (Systemd, upstart, Sysv.)
+gocollect: init.d-script-not-marked-as-conffile
+gocollect: init.d-script-not-included-in-package
+# No need for the sysv script to be executable until we move it into
+# place.
+gocollect: script-not-executable
