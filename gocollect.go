@@ -98,6 +98,19 @@ func parseConfigOrExit(filename string) (config configMap) {
     }
 
     config = configMap{}
+    parseConfigWithIncludes(&config, filename, data, 0)
+    return config
+}
+
+func parseConfigWithIncludes(config *configMap, filename string,
+                             data []byte, depth int) {
+    if depth >= 10 {
+        fmt.Fprintf(
+            os.Stderr, "%s: Rediculous include depth in %s config file!\n",
+            path.Base(os.Args[0]), filename)
+        os.Exit(1)
+    }
+
     for i, line := range bytes.Split(data, []byte{'\n'}) {
         line = bytes.TrimSpace(line)
         if len(line) > 0 && line[0] != '#' {
@@ -105,15 +118,23 @@ func parseConfigOrExit(filename string) (config configMap) {
             if len(args) == 2 {
                 key := string(bytes.TrimSpace(args[0]))
                 value := string(bytes.TrimSpace(args[1]))
-                config[key] = append(config[key], value)
+
+                if key == "include" {
+                    new_data, e := ioutil.ReadFile(value)
+                    if e == nil {
+                        parseConfigWithIncludes(config, value, new_data,
+                                                depth + 1)
+                    }
+                } else {
+                    (*config)[key] = append((*config)[key], value)
+                }
+
             } else {
                 fmt.Fprintf(
                     os.Stderr, "%s:%d: missing equals sign\n", filename, i)
             }
         }
     }
-
-    return config
 }
 
 func main() {
@@ -122,6 +143,11 @@ func main() {
 
     // Check config file.
     config := parseConfigOrExit(options["config"].String)
+    // for key, _ := range config {
+    //    for _, val := range config[key] {
+    //        fmt.Printf("%s = %s\n", key, val)
+    //    }
+    // }
 
     // Passed options scan. Check that user is root.
     if os.Getuid() != 0 && !options["without-root"].Bool {
