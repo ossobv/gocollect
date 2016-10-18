@@ -11,6 +11,7 @@ VERSION_FROM_DEB := sed -e '1!d;s/.*(\([^)]*\)).*/v\1debuild/' debian/changelog 
 VERSION_FROM_GIT := git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | \
 	sed -e 's/_/~/;s/-/+/;s/-/./'  # v0.4_rc1-3-g1234 => v0.4~rc1+3.g1234
 VERSION = $(shell $(VERSION_FROM_DEB) || $(VERSION_FROM_GIT))
+GOFLAGS = -tags netgo  # disable netcgo causing a dynamic executable
 GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
@@ -21,7 +22,9 @@ clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
-	go build $(GOLDFLAGS) gocollect.go
+	go build $(GOFLAGS) $(GOLDFLAGS) gocollect.go
+	if ldd gocollect | grep '=>'; then echo "ERROR: static linkage failed" >&2; \
+		$(RM) gocollect; false; fi
 
 gocollect-bin: gocollect
 	# Test version in gocollect -V output; it must exist and match
