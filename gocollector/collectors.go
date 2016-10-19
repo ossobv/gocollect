@@ -17,7 +17,7 @@ func NewFromPaths(paths []string) *Collectors {
 
 	last := len(paths) - 1
 	for i := range paths {
-		readpath := paths[last - i]
+		readpath := paths[last-i]
 
 		filelist, e := ioutil.ReadDir(readpath)
 		if e == nil {
@@ -59,8 +59,7 @@ func (c *Collectors) Run(key string) Collected {
 	// binaries like ip(1).
 	pathEnv := os.Getenv("PATH")
 	if pathEnv == "" {
-		pathEnv = (
-			"PATH=/usr/local/sbin:/usr/local/bin:" +
+		pathEnv = ("PATH=/usr/local/sbin:/usr/local/bin:" +
 			"/usr/sbin:/usr/bin:/sbin:/bin")
 	} else {
 		pathEnv = "PATH=" + pathEnv
@@ -116,7 +115,7 @@ func (c *Collectors) Run(key string) Collected {
 }
 
 func isExecutable(fileinfo os.FileInfo) bool {
-	if (fileinfo.IsDir()) {
+	if fileinfo.IsDir() {
 		return false
 	}
 

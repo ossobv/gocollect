@@ -24,8 +24,8 @@ type Collected interface {
 }
 
 type CollectedData struct {
-	data string  // json-blob
-	readpos int  // read-once position
+	data    string // json-blob
+	readpos int    // read-once position
 }
 
 func NewCollected(data []byte) (Collected, error) {
@@ -114,7 +114,7 @@ func (c *CollectedData) SetString(key string, value string) error {
 // Template:	http://example.com/{regid}/{fqdn}/
 // Returns:	 http://example.com/12345/1.2.3.4/
 func (c *CollectedData) BuildString(
-		template string, extra *map[string]string) string {
+	template string, extra *map[string]string) string {
 
 	decoded := make(map[string]string)
 	json.Unmarshal([]byte(c.data), &decoded) // ignore error-return

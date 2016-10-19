@@ -3,8 +3,10 @@
 package main
 
 import (
+	"./gocollector"
 	"bytes"
 	"fmt"
+	getopt "github.com/kesselborn/go-getopt"
 	"io/ioutil"
 	"log"
 	"log/syslog"
@@ -12,8 +14,6 @@ import (
 	"path"
 	"strings"
 	"time"
-	getopt "github.com/kesselborn/go-getopt"
-	"./gocollector"
 )
 
 // Initialized by -X ldflag. (Should be const, but is not allowed by the
@@ -29,12 +29,12 @@ const defaultConfigFile = "/etc/gocollect.conf"
 
 var optionDefinition = getopt.Options{
 	("GoCollect collects data through a series of scripts and publishes it\n" +
-	 "to a central server."),
+		"to a central server."),
 	getopt.Definitions{
 		{"config|c", "config file", getopt.Optional, defaultConfigFile},
 		{"one-shot|s", "run once and exit", getopt.Flag, false},
 		{"without-root", "allow run as non-privileged user", getopt.Flag,
-		 false},
+			false},
 		{"version|V", "print version", getopt.Flag, false},
 	},
 }
@@ -42,15 +42,15 @@ var optionDefinition = getopt.Options{
 func version() {
 	fmt.Printf(
 		("gocollect (GoCollect sysinfo collector) %s\n" +
-		 "Copyright (C) 2016 OSSO B.V.\n" +
-		 "License GPLv3+: GNU GPL version 3 or later " +
-		 "<http://gnu.org/licenses/gpl.html>.\n" +
-		 "This is free software: you are free to change " +
-		 "and redistribute it.\n" +
-		 "There is NO WARRANTY, to the extent permitted by law.\n" +
-		 "\n" +
-		 "Written by Walter Doekes. " +
-		 "See <https://github.com/ossobv/gocollect>.\n"),
+			"Copyright (C) 2016 OSSO B.V.\n" +
+			"License GPLv3+: GNU GPL version 3 or later " +
+			"<http://gnu.org/licenses/gpl.html>.\n" +
+			"This is free software: you are free to change " +
+			"and redistribute it.\n" +
+			"There is NO WARRANTY, to the extent permitted by law.\n" +
+			"\n" +
+			"Written by Walter Doekes. " +
+			"See <https://github.com/ossobv/gocollect>.\n"),
 		versionStr)
 }
 
@@ -103,7 +103,7 @@ func parseConfigOrExit(filename string) (config configMap) {
 }
 
 func parseConfigWithIncludes(config *configMap, filename string,
-							 data []byte, depth int) {
+	data []byte, depth int) {
 	if depth >= 10 {
 		fmt.Fprintf(
 			os.Stderr, "%s: Rediculous include depth in %s config file!\n",
@@ -123,7 +123,7 @@ func parseConfigWithIncludes(config *configMap, filename string,
 					new_data, e := ioutil.ReadFile(value)
 					if e == nil {
 						parseConfigWithIncludes(config, value, new_data,
-												depth + 1)
+							depth+1)
 					}
 				} else {
 					(*config)[key] = append((*config)[key], value)
@@ -154,9 +154,9 @@ func main() {
 		fmt.Fprintf(
 			os.Stderr,
 			("%s: Running gocollect as non-privileged user may " +
-			 "cause several\n" +
-			 "collectors to return too little info. Pass --without-root " +
-			 "to bypass this check.\n"),
+				"cause several\n" +
+				"collectors to return too little info. Pass --without-root " +
+				"to bypass this check.\n"),
 			path.Base(os.Args[0]))
 		os.Exit(1)
 	}
@@ -164,13 +164,13 @@ func main() {
 	// Take options and config and extract relevant values.
 	var apiKey, registerUrl, pushUrl string
 	if keys, ok := config["api_key"]; ok {
-		apiKey = keys[len(keys) - 1] // must have len>=1
+		apiKey = keys[len(keys)-1] // must have len>=1
 	}
 	if urls, ok := config["register_url"]; ok {
-		registerUrl = urls[len(urls) - 1] // must have len>=1
+		registerUrl = urls[len(urls)-1] // must have len>=1
 	}
 	if urls, ok := config["push_url"]; ok {
-		pushUrl = urls[len(urls) - 1] // must have len>=1
+		pushUrl = urls[len(urls)-1] // must have len>=1
 	}
 	collectorsPaths := config["collectors_path"]
 	oneShot := options["one-shot"].Bool
@@ -187,7 +187,7 @@ func main() {
 	if oneShot {
 		logger = log.New(os.Stderr, "", log.LstdFlags)
 	} else {
-		tmp, err := syslog.NewLogger(syslog.LOG_DAEMON | syslog.LOG_INFO, 0)
+		tmp, err := syslog.NewLogger(syslog.LOG_DAEMON|syslog.LOG_INFO, 0)
 		if err == nil {
 			logger = tmp
 		} else {

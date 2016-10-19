@@ -136,10 +136,13 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect-bin
 	@echo "Created: gocollect-$(TGZ_VERSION).tar.gz"
 
 
-.PHONY: testrun
+.PHONY: testrun pretty
 testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
 	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
+
+pretty:
+	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
 
 # .PHONY: fetch-new-package
 # fetch-new-package:

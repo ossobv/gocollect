@@ -13,8 +13,8 @@ import (
 )
 
 func CollectAndPostData(
-		registerUrl string, pushUrl string, collectorsPaths []string,
-		regidFilename string, apiKey string, gocollectVersion string) bool {
+	registerUrl string, pushUrl string, collectorsPaths []string,
+	regidFilename string, apiKey string, gocollectVersion string) bool {
 
 	// Collect all collectors based on the supplied paths.
 	collectors := NewFromPaths(collectorsPaths)
@@ -112,7 +112,7 @@ func httpPost(url string, data Collected) ([]byte, error) {
 }
 
 func register(registerUrl string, coreIdData Collected,
-			  regidFilename string) bool {
+	regidFilename string) bool {
 	// Post data, expect {"data":{"regid":"12345"}}.
 	data, err := httpPost(registerUrl, coreIdData)
 	if err != nil {
