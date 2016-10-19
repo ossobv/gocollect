@@ -1,6 +1,9 @@
 GoCollect
 =========
 
+.. image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
+    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
+
 GoCollect collects various pieces of system info and publishes them to a
 central server.
 
