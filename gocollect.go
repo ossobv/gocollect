@@ -75,7 +75,7 @@ func parseArgsOrExit() (options map[string]getopt.OptionValue) {
 	} else if len(passThrough) != 0 {
 		fmt.Fprintf(
 			os.Stderr,
-			"%s: passthrough? %r\n\n%s\nSee --help for more info.\n",
+			"%s: excess args after -- %#v\n\n%s\nSee --help for more info.\n",
 			path.Base(os.Args[0]), passThrough,
 			strings.TrimSpace(optionDefinition.Usage()))
 		os.Exit(1)
