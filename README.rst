@@ -128,3 +128,4 @@ Golang notes to self
 
 - https://golang.org/doc/code.html
 - http://openmymind.net/
+- https://jamescun.com/golang/binary-size/
