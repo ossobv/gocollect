@@ -3,11 +3,11 @@
 package gocollector
 
 import (
-    "log"
+	"log"
 )
 
 var logger *log.Logger
 
 func SetLog(suggestedLogger *log.Logger) {
-    logger = suggestedLogger
+	logger = suggestedLogger
 }
