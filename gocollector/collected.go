@@ -1,5 +1,5 @@
-// GoCollect daemon, collects data through supplied scripts, writes data
-// to a central server.
+// Package gocollector is the core of the GoCollect daemon. It collects
+// data through supplied scripts, writes data to a central server.
 package gocollector
 
 import (
@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+// Collected is the interface to operate on collected data. It molds
+// collected bytes into something that implements HTTP POST method can
+// read. Additionally, it allows alterations of top-level JSON key
+// values.
 type Collected interface {
 	// The same as the io.Reader interface; used when posting data
 	// through HTTP.
@@ -23,11 +27,12 @@ type Collected interface {
 	SetString(key string, value string) error
 }
 
-type CollectedData struct {
+type collectedData struct {
 	data    string // json-blob
 	readpos int    // read-once position
 }
 
+// NewCollected creates a new Collected object from the supplied bytes.
 func NewCollected(data []byte) (Collected, error) {
 	// Compact the data and validate it at the same time.
 	compacted := new(bytes.Buffer)
@@ -41,11 +46,11 @@ func NewCollected(data []byte) (Collected, error) {
 	// beneficial for readability when storing the json as plaintext.
 	compacted.WriteByte('\n')
 
-	tmp := CollectedData{data: compacted.String()}
+	tmp := collectedData{data: compacted.String()}
 	return &tmp, nil
 }
 
-func (c *CollectedData) Read(p []byte) (n int, err error) {
+func (c *collectedData) Read(p []byte) (n int, err error) {
 	written := copy(p, []byte(c.data[c.readpos:]))
 	c.readpos += written
 	if c.readpos == len(c.data) {
@@ -58,7 +63,7 @@ func (c *CollectedData) Read(p []byte) (n int, err error) {
 // Data:		{"fqdn":"1.2.3.4","regid":"12345"}
 // Key:		 fqdn
 // Returns:	 1.2.3.4
-func (c *CollectedData) GetString(key string) string {
+func (c *collectedData) GetString(key string) string {
 	decoded := make(map[string]string)
 	e := json.Unmarshal([]byte(c.data), &decoded)
 	if e != nil {
@@ -76,7 +81,7 @@ func (c *CollectedData) GetString(key string) string {
 // Value:	   1.2.3
 // Returns:	 error or updates Data to look like this:
 //			  {"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
-func (c *CollectedData) SetString(key string, value string) error {
+func (c *collectedData) SetString(key string, value string) error {
 	// Check that no one has started reading already.
 	if c.readpos != 0 {
 		return errors.New("Cannot alter collected data after read")
@@ -113,7 +118,7 @@ func (c *CollectedData) SetString(key string, value string) error {
 // Data:		{"fqdn":"1.2.3.4","regid":"12345"}
 // Template:	http://example.com/{regid}/{fqdn}/
 // Returns:	 http://example.com/12345/1.2.3.4/
-func (c *CollectedData) BuildString(
+func (c *collectedData) BuildString(
 	template string, extra *map[string]string) string {
 
 	decoded := make(map[string]string)

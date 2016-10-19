@@ -1,5 +1,5 @@
-// GoCollect daemon, collects data through supplied scripts, writes data
-// to a central server.
+// Package gocollector is the core of the GoCollect daemon. It collects
+// data through supplied scripts, writes data to a central server.
 package gocollector
 
 import (
@@ -10,8 +10,18 @@ import (
 	"sort"
 )
 
+// Collectors holds a key/value map of strings where key is the
+// collector name and value is the collector path. If a path is the
+// empty string, it means the collector exists but was intentionally
+// disabled.
 type Collectors map[string]string
 
+// NewFromPaths returns a Collectors object that holds all runnable
+// collector scripts found in the supplied paths.
+//
+// The paths are scanned in reverse order. The file name is the unique
+// key name. If the file is not executable, the collector is stored
+// without path to signifiy that it's disabled.
 func NewFromPaths(paths []string) *Collectors {
 	ret := Collectors{}
 
@@ -27,7 +37,7 @@ func NewFromPaths(paths []string) *Collectors {
 					// We don't have this item yet. Add it. However, if
 					// it's non-executable, don't store the path because
 					// we won't run it: this can be used to block
-					// system defined collectors from a user-directory.
+					// system defined Collectors from a user-directory.
 					fullpath := ""
 					if isExecutable(fileinfo) {
 						// Yes, executable. Make it runnable.
@@ -42,7 +52,7 @@ func NewFromPaths(paths []string) *Collectors {
 	return &ret
 }
 
-// Returns the keys that have a runnable collector.
+// Runnable returns all keys that have a runnable collector.
 func (c *Collectors) Runnable() (keys []string) {
 	for key, value := range *c {
 		if value != "" {
@@ -53,6 +63,7 @@ func (c *Collectors) Runnable() (keys []string) {
 	return keys
 }
 
+// Run runs the collector named by key and returns a Collected object.
 func (c *Collectors) Run(key string) Collected {
 	// Create a clean environment without LC_ALL to mess up output.
 	// But make sure there is a valid path so we can find useful

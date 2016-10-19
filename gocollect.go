@@ -106,7 +106,7 @@ func parseConfigWithIncludes(config *configMap, filename string,
 	data []byte, depth int) {
 	if depth >= 10 {
 		fmt.Fprintf(
-			os.Stderr, "%s: Rediculous include depth in %s config file!\n",
+			os.Stderr, "%s: Ridiculous include depth in %s config file!\n",
 			path.Base(os.Args[0]), filename)
 		os.Exit(1)
 	}
@@ -120,9 +120,9 @@ func parseConfigWithIncludes(config *configMap, filename string,
 				value := string(bytes.TrimSpace(args[1]))
 
 				if key == "include" {
-					new_data, e := ioutil.ReadFile(value)
+					newData, e := ioutil.ReadFile(value)
 					if e == nil {
-						parseConfigWithIncludes(config, value, new_data,
+						parseConfigWithIncludes(config, value, newData,
 							depth+1)
 					}
 				} else {
@@ -162,15 +162,15 @@ func main() {
 	}
 
 	// Take options and config and extract relevant values.
-	var apiKey, registerUrl, pushUrl string
+	var apiKey, registerURL, pushURL string
 	if keys, ok := config["api_key"]; ok {
 		apiKey = keys[len(keys)-1] // must have len>=1
 	}
 	if urls, ok := config["register_url"]; ok {
-		registerUrl = urls[len(urls)-1] // must have len>=1
+		registerURL = urls[len(urls)-1] // must have len>=1
 	}
 	if urls, ok := config["push_url"]; ok {
-		pushUrl = urls[len(urls)-1] // must have len>=1
+		pushURL = urls[len(urls)-1] // must have len>=1
 	}
 	collectorsPaths := config["collectors_path"]
 	oneShot := options["one-shot"].Bool
@@ -201,7 +201,7 @@ func main() {
 	gocollector.SetLog(logger)
 	for {
 		ret := gocollector.CollectAndPostData(
-			registerUrl, pushUrl, collectorsPaths, regidFilename,
+			registerURL, pushURL, collectorsPaths, regidFilename,
 			apiKey, versionStr)
 		if oneShot {
 			if !ret {

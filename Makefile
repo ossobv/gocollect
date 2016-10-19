@@ -143,6 +143,7 @@ testrun: gocollect-bin
 
 pretty:
 	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
+	golint && cd gocollector && golint
 
 # .PHONY: fetch-new-package
 # fetch-new-package:

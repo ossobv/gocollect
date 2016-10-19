@@ -1,5 +1,5 @@
-// GoCollect daemon, collects data through supplied scripts, writes data
-// to a central server.
+// Package gocollector is the core of the GoCollect daemon. It collects
+// data through supplied scripts, writes data to a central server.
 package gocollector
 
 import (
@@ -12,8 +12,10 @@ import (
 	"time"
 )
 
+// CollectAndPostData collects data from the collectors and pushes data
+// to the central server. If needed, it registers first.
 func CollectAndPostData(
-	registerUrl string, pushUrl string, collectorsPaths []string,
+	registerURL string, pushURL string, collectorsPaths []string,
 	regidFilename string, apiKey string, gocollectVersion string) bool {
 
 	// Collect all collectors based on the supplied paths.
@@ -23,34 +25,34 @@ func CollectAndPostData(
 	http.DefaultClient.Timeout = 45 * time.Second
 
 	// Fetch the core info -- which also fetches the regid.
-	coreIdData := collectors.Run("core.id")
-	if coreIdData == nil {
+	coreIDData := collectors.Run("core.id")
+	if coreIDData == nil {
 		return false
 	}
 
 	// Patch core.id with our version and optional apiKey.
-	coreIdData.SetString("gocollect", gocollectVersion)
+	coreIDData.SetString("gocollect", gocollectVersion)
 	if apiKey != "" {
-		coreIdData.SetString("gocollect-apikey", apiKey)
+		coreIDData.SetString("gocollect-apikey", apiKey)
 	}
 
 	// Check if we need to register first.
-	regid := coreIdData.GetString("regid")
+	regid := coreIDData.GetString("regid")
 	if regid == "" {
 		// Post data, expect {"data":{"regid":"12345"}}.
-		result := register(registerUrl, coreIdData, regidFilename)
+		result := register(registerURL, coreIDData, regidFilename)
 		if !result {
 			return false
 		}
 
 		// Re-get core.id data: this time we must have regid or core.id
 		// is broken (or the registration helper).
-		coreIdData = collectors.Run("core.id")
-		if coreIdData == nil {
+		coreIDData = collectors.Run("core.id")
+		if coreIDData == nil {
 			return false
 		}
 
-		regid = coreIdData.GetString("regid")
+		regid = coreIDData.GetString("regid")
 		if regid == "" {
 			logger.Fatal("No regid after register from core.id")
 			return false
@@ -66,7 +68,7 @@ func CollectAndPostData(
 		case "core.id":
 			// No need to fetch it again. And besides, we patched it
 			// above to contain the version as well.
-			collected = coreIdData
+			collected = coreIDData
 		default:
 			// Exec the collector.
 			collected = collectors.Run(collectorKey)
@@ -77,12 +79,12 @@ func CollectAndPostData(
 			continue
 		}
 
-		// We update the pushUrl for every push because the _collector
+		// We update the pushURL for every push because the _collector
 		// is in it, which changes continuously.
 		extraContext["_collector"] = collectorKey
-		tmpPushUrl := coreIdData.BuildString(pushUrl, &extraContext)
+		tmpPushURL := coreIDData.BuildString(pushURL, &extraContext)
 
-		push(tmpPushUrl, collected)
+		push(tmpPushURL, collected)
 	}
 
 	// TODO: call close on DefaultHttpHandler? Also before every return?
@@ -111,25 +113,25 @@ func httpPost(url string, data Collected) ([]byte, error) {
 	return output, err
 }
 
-func register(registerUrl string, coreIdData Collected,
+func register(registerURL string, coreIDData Collected,
 	regidFilename string) bool {
 	// Post data, expect {"data":{"regid":"12345"}}.
-	data, err := httpPost(registerUrl, coreIdData)
+	data, err := httpPost(registerURL, coreIDData)
 	if err != nil {
-		logger.Printf("register[%s]: failed: %s", registerUrl, err)
+		logger.Printf("register[%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	var decoded map[string](map[string]string)
 	err = json.Unmarshal(data, &decoded)
 	if err != nil {
-		logger.Printf("register[%s]: failed: %s", registerUrl, err)
+		logger.Printf("register[%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	value := decoded["data"]["regid"]
 	if value == "" {
-		logger.Printf("register[%s]: failed: got nothing", registerUrl)
+		logger.Printf("register[%s]: failed: got nothing", registerURL)
 		return false
 	}
 
@@ -141,17 +143,17 @@ func register(registerUrl string, coreIdData Collected,
 		return false
 	}
 
-	logger.Printf("register[%s]: got %s", registerUrl, value)
+	logger.Printf("register[%s]: got %s", registerURL, value)
 	return true
 }
 
-func push(pushUrl string, collectedData Collected) bool {
-	data, err := httpPost(pushUrl, collectedData)
+func push(pushURL string, collectedData Collected) bool {
+	data, err := httpPost(pushURL, collectedData)
 	if err != nil {
-		logger.Printf("push[%s]: failed: %s", pushUrl, err)
+		logger.Printf("push[%s]: failed: %s", pushURL, err)
 		return false
 	}
 
-	logger.Printf("push[%s]: got %s", pushUrl, string(data))
+	logger.Printf("push[%s]: got %s", pushURL, string(data))
 	return true
 }
