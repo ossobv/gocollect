@@ -9,19 +9,33 @@
 #
 # We add an extra sed(1) to undo df formatting that splits the non-initial
 # columns onto secondary lines.
+#
+# We skip all mount points that do not originate off a /-device. At least
+# the ZFS filesystem has a tendency to fluctuate, for instance on shared
+# LXC/LXD hosts. Instead we add separate check for zpool info.
+
+output=$(df -B1048576 --output=source,fstype,itotal,size,target 2>/dev/null |
+         sed -e '/^[^/]/d;s/^\([^[:blank:]]\)/|\1/;$s/$/|/' |
+         tr -d '\n' | tr '|' '\n' |
+         awk 'BEGIN{i=0}{if(i){if(i>1)printf ",";print \
+              "{\"type\":\"" $2 "\",\"inodes\":" $3 ",\"megabytes\":" $4 \
+              ",\"source\":\"" $1 "\",\"target\":\"" $5 "\"}"}i+=1}')
+if test -z "$output"; then
+    output=$(df -B1048576 | sed -e '/^[^/]/d;s/^\([^[:blank:]]\)/|\1/;$s/$/|/' |
+             tr -d '\n' | tr '|' '\n' |
+             awk 'BEGIN{i=0}{if(i){if(i>1)print ",";print "{\"source\":\"" $1 \
+                  "\",\"megabytes\":" $2 ",\"target\":\"" $6 "\"}"}i+=1}')
+fi
+
+# Grab ZFS info too.
+zfs=$(zpool list -Ho size,name 2>/dev/null | sed -e 's/\([^0-9]\)/ \1/' |
+      awk 'BEGIN{i=0}{if($2=="T")m=1024*1024;else if($2=="G")m=1024; \
+           else if($2=="M")m=1;else m=0;if(i>0)printf ","; print \
+           "{\"type\":\"zfs\",\"inodes\":null,\"megabytes\":" ($1*m) \
+           ",\"source\":\"" $3 "\",\"target\":null}";i+=1}')
 
 echo "["
-output=`df -B1048576 --output=fstype,itotal,size,source,target 2>/dev/null |
-        sed -e '2,$s/^\([^[:blank:]]\)/|\1/;$s/$/|/' | tr -d '\n' | tr '|' '\n' |
-        awk 'BEGIN{i=0}{if(i){if(i>1)print ",";print \
-             "{\"type\":\"" $1 "\",\"inodes\":" $2 ",\"megabytes\":" $3 \
-             ",\"source\":\"" $4 "\",\"target\":\"" $5 "\"}"}i+=1}'`
-if test -n "$output"; then
-    echo "$output"
-else
-    df -B1048576 |
-    sed -e '2,$s/^\([^[:blank:]]\)/|\1/;$s/$/|/' | tr -d '\n' | tr '|' '\n' |
-    awk 'BEGIN{i=0}{if(i){if(i>1)print ",";print "{\"source\":\"" $1 \
-            "\",\"megabytes\":" $2 ",\"target\":\"" $6 "\"}"}i+=1}'
-fi
+echo "$output"
+test -n "$output" && test -n "$zfs" && echo -n ","
+echo "$zfs"
 echo "]"
