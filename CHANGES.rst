@@ -15,5 +15,6 @@ Changes
   - core.meta: Add optional custom (node-specific) data to be passed.
   - os.distro: Prefer os-release over lsb_release parsing.
   - os.storage: Reduce fluctuating listings (zfs, magicfs, tmpfs).
+  - app.lshw: Mask out the CPU clock speed that fluctuates.
 
 * v0.4.0 [2016-09-28]: The initial real release used in production.
