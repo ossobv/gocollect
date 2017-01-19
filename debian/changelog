@@ -1,3 +1,30 @@
+gocollect (0.5.0-1) stable; urgency=medium
+
+  * Create v0.5.0-1 release.
+    - core: Added 'api_key' key in the config file to set the API key to
+      authenticate to the collector server.
+    - core: Added 'include' directive in the config file (no globbing) to
+      include single files like /etc/gocollect.conf.local.
+    - core: Force really-really static go executable.
+
+    - release: Experiment with increasing version numbers for releases of
+      the same build on different operating system versions.
+
+    - core.meta: Add optional custom (node-specific) data to be passed.
+    - os.distro: Prefer os-release over lsb_release parsing.
+    - os.storage: Reduce fluctuating listings (zfs, magicfs, tmpfs).
+    - app.lshw: Mask out the CPU clock speed that fluctuates.
+
+  * Fix lintian issues:
+    - E: gocollect changes: bad-distribution-in-changes-file stable;
+      by putting "UNRELEASED" there.
+    - W: gocollect: hardening-no-relro usr/sbin/gocollect;
+      by adding it to the ignore list.
+
+  * Attempt systemctl before initctl. Should ease release-upgrades.
+
+ -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Thu, 19 Jan 2017 11:28:56 +0100
+
 gocollect (0.4.0-1) stable; urgency=medium
 
   * Create v0.4.0 release.
@@ -13,4 +40,4 @@ gocollect (0.4.0-1) stable; urgency=medium
   * Add 99gocollect-restart to apt.conf.d to auto-restart gocollect
     after apt runs. (Don't fail if it fails.)
 
- -- Walter Doekes <wjdoekes@osso.nl>  Wed, 28 Sep 2016 11:48:07 +0200
+ -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Wed, 28 Sep 2016 11:48:07 +0200

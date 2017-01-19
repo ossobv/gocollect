@@ -11,8 +11,8 @@ if [ "$1" = configure ]; then
 	# from upstart to systemd).
 	rm -f /etc/init/gocollect.conf /etc/init.d/gocollect
 
-	# Upstart?
-	if initctl version >/dev/null 2>&1; then
+	# Upstart? (Only if there is no systemctl.)
+	if ! systemctl status >/dev/null 2>&1 && initctl version >/dev/null 2>&1; then
 		# Because we don't symlink the others, might as well
 		# copy this one too.
 		cp -a /usr/share/gocollect/rc/upstart.conf /etc/init/gocollect.conf

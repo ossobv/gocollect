@@ -11,8 +11,8 @@ Homepage: https://github.com/ossobv/gocollect
 
 Package: gocollect
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, apt, dmidecode,
- iproute | iproute2, lsb-release, procps
+Depends: ${shlibs:Depends}, ${misc:Depends}, apt,
+ base-files (>=7.2) | lsb-release, dmidecode, iproute2 | iproute, procps
 Description: Collect rarely changing system info for server mapping.
  GoCollect collects various pieces of system info and publishes them to
  a central server.
@@ -25,8 +25,8 @@ Description: Collect rarely changing system info for server mapping.
 
 Package: gocollect-hardware
 Architecture: any
-Depends: ${misc:Depends}, gocollect, ipmitool, kmod | module-init-tools,
- smartmontools
+Depends: gocollect (= ${binary:Version}), ${misc:Depends}, ipmitool,
+ kmod | module-init-tools, smartmontools
 Description: Collect rarely changing system info for server mapping.
  GoCollect collects various pieces of system info and publishes them to
  a central server.
@@ -36,7 +36,7 @@ Description: Collect rarely changing system info for server mapping.
 
 Package: gocollect-osso
 Architecture: all
-Depends: ${misc:Depends}, gocollect
+Depends: gocollect (>= ${binary:Version}), ${misc:Depends}
 Provides: gocollect-config
 Description: OSSO-specific configuration files for GoCollect
  GoCollect collects various pieces of system info and publishes them to

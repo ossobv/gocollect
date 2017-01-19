@@ -44,8 +44,8 @@ override_dh_installinit:
 	# from during postinst.
 	mkdir -p $(CURDIR)/debian/gocollect/usr/share/gocollect/rc
 	cp -a rc/* $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/
-	# W: gocollect: script-not-executable usr/share/gocollect/rc/debian.sysv
-	chmod 755 $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/debian.sysv
+	# W: gocollect: script-not-executable usr/share/gocollect/rc/*.sysv
+	chmod 755 $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/*.sysv
 
 override_dh_installexamples:
 	# Copy the sample config

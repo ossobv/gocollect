@@ -3,6 +3,13 @@
 # (Systemd, upstart, Sysv.)
 gocollect: init.d-script-not-marked-as-conffile
 gocollect: init.d-script-not-included-in-package
-# No need for the sysv script to be executable until we move it into
-# place.
-gocollect: script-not-executable
+# The golang compiled binary contains ~27 PLT entries (stubs to the
+# externally linked function) to be overwritten because it's only linked
+# against libc/libpthread. But still one would think that it could
+# provide a hardening-no-relro flag.
+# For now, just ask lintian to stop complaining.
+# See also:
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=795667
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=795667;filename=0001-Suppress-hardening-no-relro-no-fortify-functions-for.patch;msg=5
+#hardening-no-relro usr/sbin/gocollect
+statically-linked-binary usr/sbin/gocollect
