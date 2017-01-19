@@ -1,3 +1,10 @@
+gocollect (0.5.0-2) stable; urgency=medium
+
+  * Remove apt repository alter hack again. This was only needed in the
+    'osso' component on the OSSO ppa server.
+
+ -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Thu, 19 Jan 2017 13:40:25 +0100
+
 gocollect (0.5.0-1) stable; urgency=medium
 
   * Create v0.5.0-1 release.
