@@ -3,7 +3,7 @@
 # LABELS: hardware-only
 # REQUIRES: debianutils(which)
 # REQUIRES: ipmitool(ipmitool)
-# REQUIRES: kmod(modprobe)
+# REQUIRES: kmod(modprobe) | module-init-tools(modprobe)
 # REQUIRES: sed(sed)
 
 

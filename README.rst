@@ -1,6 +1,9 @@
 GoCollect
 =========
 
+.. image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
+    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
+
 GoCollect collects various pieces of system info and publishes them to a
 central server.
 
@@ -125,3 +128,4 @@ Golang notes to self
 
 - https://golang.org/doc/code.html
 - http://openmymind.net/
+- https://jamescun.com/golang/binary-size/

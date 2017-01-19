@@ -17,11 +17,59 @@ log() {
     logger -s -p daemon.warn "gocollect: $@"
 }
 
+get_version() {
+    if test -n "$version"; then
+        echo "$version.fallback"
+    else
+        echo "fallback-md5-$(md5sum < "$0" 2>/dev/null | tr -d '\t -')"
+    fi
+}
+
+get_core_id() {
+    # Patch core_id with our version and optionally api_key.
+    tmp_key=$(echo "$1" | sed -e 's/[^A-Za-z0-9_+/.-]//g')
+    tmp_insert='"gocollect":"'$calc_version'",'
+    if test -n "$tmp_key"; then
+        tmp_insert=$tmp_insert'"gocollect-apikey":"'$tmp_key'",'
+    fi
+    "$path/core.id" | sed -e '/^[[:blank:]]*$/d' |
+        sed -e "1s#[[:blank:]]*{#{$tmp_insert#"
+}
+
+get_config() {
+    key="$1"
+    sed -e '/^[[:blank:]]*'$key'[[:blank:]=]/!d;s/.*= *//' "$conf"
+}
+
+check_config() {
+    # includes are NOT implemented
+    if test -n "$(get_config include)"; then
+        log "core: all 'include' directives in $conf will be ignored!"
+    fi
+
+    # collectors_path are NOT implemented
+    collectors_path=$(get_config collectors_path)
+    echo "$collectors_path" | while read tmp; do
+        test "$tmp" != "$path" &&
+            log "core: will not use '$tmp' as collectors_path"
+    done
+    if ! echo "$collectors_path" | grep -q "^$path$"; then
+        log "core: will use '$path' as collectors_path"
+    fi
+
+    # will refuse to run as anything other than root
+    if test $(id -u) != 0; then
+        log "core: refusing to run as non-root. stopping.."
+        exit 1
+    fi
+}
+
 run() {
-    reg_url=$(sed -e '/^register_url/!d;s/.*= *//' "$conf")
-    push_url=$(sed -e '/^push_url/!d;s/.*= *//' "$conf")
+    api_key=$(get_config api_key | tail -n1)  # optional
+    reg_url=$(get_config register_url | tail -n1)
+    push_url=$(get_config push_url | tail -n1)
     
-    core_id=$("$path/core.id")
+    core_id=$(get_core_id "$api_key")
     regid=$(echo "$core_id" | sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
     
     if test -z "$regid"; then
@@ -37,31 +85,22 @@ run() {
         echo "$regid" > /var/lib/gocollect/core.id.regid
     
         # Re-get core info. Check values.
-        core_id=$("$path/core.id")
-        regid=$(echo "$core_id" | sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
+        core_id=$(get_core_id "$api_key")
+        regid=$(echo "$core_id" |
+                sed -e '/"regid"/!d;s/.*"regid": *"//;s/".*//')
         if test -z "$regid"; then
             log "core.id reg load failure"
             exit 1
         fi
     fi
 
-    # Patch core_id with our version.
-    if test -n "$version"; then
-        self_version="$version.fallback"
-    else
-        self_version=$(md5sum < "$0" 2>/dev/null | tr -d '\t -')
-        self_version="fallback-md5-$self_version"
-    fi
-    core_id=$(echo "$core_id" | sed -e '/^[[:blank:]]*$/d' |
-              sed -e '1s/{/{"gocollect":"'$self_version'",/')
-    
     # Jobs
     temp=$(mktemp)
     find "$path" -maxdepth 1 -type f -perm -700 | while read job; do
         case "$job" in
         */core.id)
             # No need to fetch it again. And besides, we patched it
-            # above to contain the version as well.
+            # above to contain the version and api_key as well.
             output="$core_id"
             ret=0
             ;;
@@ -78,7 +117,8 @@ run() {
 
         if test -n "$output" && test $ret -eq 0; then
             collector=$(basename "$job")
-            url=$(echo "$push_url" | sed -e "s/{regid}/$regid/g;s/{_collector}/$collector/g")
+            url=$(echo "$push_url" |
+                  sed -e "s/{regid}/$regid/g;s/{_collector}/$collector/g")
             log "$job: push to $url"
             echo "$output" | post "$url"
         fi
@@ -86,7 +126,9 @@ run() {
     rm -f "$temp"
 }
 
+calc_version=$(get_version)  # before "cd /"
 cd /
+check_config
 while :; do
     run
     sleep 14400  # 4 hours

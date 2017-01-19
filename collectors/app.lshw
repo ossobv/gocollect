@@ -2,8 +2,13 @@
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: optional
 # REQUIRES: lshw(lshw)
+# REQUIRES: sed(sed)
 
-lshw -json </dev/null 2>/dev/null
+# The sed-command replaces the "size" parameter in the "cpu" dictionary
+# with -1 because it fluctuates on certain CPUs.
+lshw -json </dev/null 2>/dev/null | sed -e '
+    /"id"[[:blank:]:]*"cpu",/,/"size"[[:blank:]:]*[0-9]\+/{
+      s/"size"[[:blank:]:]*[0-9]\+/"size": -1/g}'
 
 # Output parsing examples
 #

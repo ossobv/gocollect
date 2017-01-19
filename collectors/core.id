@@ -1,9 +1,9 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(head tr)
+# REQUIRES: coreutils(cat head tr)
 # REQUIRES: dmidecode(dmidecode)
 # REQUIRES: hostname(hostname)
-# REQUIRES: iproute2(ip)
+# REQUIRES: iproute2(ip) | iproute(ip)
 # REQUIRES: sed(sed)
 #
 # NOTE: This one is special. The values are used in the communication of

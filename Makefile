@@ -11,6 +11,7 @@ VERSION_FROM_DEB := sed -e '1!d;s/.*(\([^)]*\)).*/v\1debuild/' debian/changelog 
 VERSION_FROM_GIT := git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | \
 	sed -e 's/_/~/;s/-/+/;s/-/./'  # v0.4_rc1-3-g1234 => v0.4~rc1+3.g1234
 VERSION = $(shell $(VERSION_FROM_DEB) || $(VERSION_FROM_GIT))
+GOFLAGS = -tags netgo  # disable netcgo causing a dynamic executable
 GOLDFLAGS = -ldflags "-X main.versionStr=$(VERSION)"
 
 
@@ -21,7 +22,9 @@ clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
-	go build $(GOLDFLAGS) gocollect.go
+	go build $(GOFLAGS) $(GOLDFLAGS) gocollect.go
+	if ldd gocollect | grep '=>'; then echo "ERROR: static linkage failed" >&2; \
+		$(RM) gocollect; false; fi
 
 gocollect-bin: gocollect
 	# Test version in gocollect -V output; it must exist and match
@@ -91,13 +94,11 @@ debian-depends:
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: hostname
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: sed
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: util-linux
-	# NOTE: iproute2 is called iproute on older systems
-	# NOTE: kmod is called module-init-tools on older systems
-	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
+	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
 		`grep -LE '(LABELS.*optional|LABELS.*hardware-only)' $(COLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (main)'
-	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/(.*//' \
+	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
 		`grep -lE 'LABELS.*hardware-only' $(COLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (hardware-only)'
@@ -135,10 +136,14 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect-bin
 	@echo "Created: gocollect-$(TGZ_VERSION).tar.gz"
 
 
-.PHONY: testrun
+.PHONY: testrun pretty
 testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
 	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
+
+pretty:
+	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
+	golint && cd gocollector && golint
 
 # .PHONY: fetch-new-package
 # fetch-new-package:

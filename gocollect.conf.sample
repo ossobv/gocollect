@@ -1,9 +1,14 @@
 # GoCollect configuration.
 
+# api_key: Optional API key which is passed along during registration
+#   and updates. This key is required for some collector servers to map
+#   your server to a specific company.
+#api_key = ABCDEF_THIS_IS_A_KEY
+
 # register_url: Specify URL where to register this GoCollect instance.
 #   You can skip the register-step by prepopulating
 #   /var/lib/gocollect/core.id.regid with a valid key.
-#push_url = https://example.com/register/
+#register_url = https://example.com/register/
 register_url = http://localhost:8000/register/
 
 # push_url: Specify URL where to post the data.
@@ -26,3 +31,8 @@ push_url = http://localhost:8000/update/{regid}/{_collector}/
 collectors_path = /usr/share/gocollect/collectors
 collectors_path = /usr/local/share/gocollect/collectors
 collectors_path = /home/walter/gocollect/collectors
+
+# Optionally include these files if available. At the moment, globbing
+# is not supported.
+include = /etc/gocollect.conf.local
+include = /usr/local/etc/gocollect.conf.local
