@@ -23,7 +23,10 @@ gocollect (0.5.0-1) stable; urgency=medium
 
   * Attempt systemctl before initctl. Should ease release-upgrades.
 
- -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Thu, 19 Jan 2017 11:28:56 +0100
+  * Update the apt repository in the sources.lists through postinst.
+    This is a temp hack!
+
+ -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Thu, 19 Jan 2017 13:33:43 +0100
 
 gocollect (0.4.0-1) stable; urgency=medium
 

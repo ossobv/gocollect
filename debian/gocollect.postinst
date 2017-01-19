@@ -64,4 +64,13 @@ fi
 
 #DEBHELPER#
 
+# If there is no ppa.osso.nl.*gocollect then replace all without
+# the gocollect component to one with it. This is a quick hack to
+# auto-update the sources list.
+if ! grep -qR '^deb http://ppa.osso.nl/.* gocollect' /etc/apt/sources.list /etc/apt/sources.list.d; then
+    find /etc/apt/sources.list /etc/apt/sources.list.d -type f -print0 |
+        xargs -0 grep -l 'http://ppa\.osso\.nl/.*osso' | xargs -d\\n sed -i -e '
+            /^deb\(-src\)\? http:\/\/ppa.osso.nl\/.* osso/{/gocollect/!s/ osso/ gocollect osso/}'
+fi
+
 exit 0
