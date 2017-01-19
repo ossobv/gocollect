@@ -1,0 +1,216 @@
+#!/bin/bash
+# vim: set ts=8 sw=4 sts=4 et ai:
+# (using bash for array support)
+#
+# reprepro-foreach assumes it is run from /srv/reprepro where there are
+# two subdirectories: 'debian' and 'ubuntu'.
+# Those directories in turn contain a 'conf/distributions' where the Codenames
+# are listed and which Components are available for that codename.
+#
+# Use reprepro-foreach to insert your package into all codenames where your
+# component is listed. See "reprepro-foreach osso noop" for an example.
+#
+# OBSERVE: For the 'add' operation, the package is repacked with a version
+# addition like "~ubu16.04". Even though the package is usable on multiple
+# distributions at once, this causes a release-upgrade to reinstall. This may
+# be required for post-install scripts.
+#
+# CAVEATS: I'm not sure this actually fixes gocollect issue #18. That only
+# works if the newer init daemon is configured properly before the gocollect
+# postinst is run.
+#
+# Copyright (C) 2017, Walter Doekes, OSSO B.V.
+#
+set -u
+
+DISTROS="debian ubuntu"
+
+CODENAME_MAP=(
+  # Debian
+  "jessie"  "deb8"
+  "wheezy"  "deb7"
+  "squeeze" "deb6"
+  "lenny"   "deb5"
+  # Ubuntu
+  "xenial"  "ubu16.04"
+  "trusty"  "ubu14.04"
+  "precise" "ubu12.04"
+  "lucid"   "ubu10.04"
+  "karmic"  "ubu9.04"
+  "hardy"   "ubu8.04"
+)
+
+
+codename_to_version() {
+    local next item
+    next=0
+    for item in ${CODENAME_MAP[@]}; do
+        if test $next -eq 1; then
+            echo $item
+            return
+        fi
+        if test $item = $1; then
+            next=1
+        fi
+    done
+    echo "codename '$1' not found in map" >&2
+    exit 1
+}
+
+codenames_for_distro_component() {
+    cat "$1/conf/distributions" |
+    awk 'BEGIN{RS="\n\n"} /Components:[^\n]*[^a-z0-9\n]'$2'[^a-z0-9]/{print $0}' |
+    sed -ne 's/^Codename: \(.*\)/\1/p' | sort -u
+}
+
+update_checksums() {
+    local file
+    local flags f
+    file="$1"; shift
+    flags=$(cat "$file" | sed -e '$!d;s/ [^ ]*$//;s/^\( [^ ]*\)\{2\}//')
+
+    sed -e '/Checksums-Sha1:/,$d' "$file" >"$file.tmp"
+    (
+        echo "Checksums-Sha1:"
+        for f in "$@"; do
+            sha1sum "$f" | sed -e "s/^/ /;s/  / $(stat -c%s "$f") /"
+        done
+        echo "Checksums-Sha256:"
+        for f in "$@"; do
+            sha256sum "$f" | sed -e "s/^/ /;s/  / $(stat -c%s "$f") /"
+        done
+        echo "Files:"
+        for f in "$@"; do
+            md5sum "$f" | sed -e "s/^/ /;s/  / $(stat -c%s "$f")$flags /"
+        done
+    ) >>"$file.tmp"
+
+    mv "$file.tmp" "$file"
+}
+
+reprepro_add() {
+    local distro codename changes path version
+    local codealias versionsed tmppath tmpchanges f newf
+    distro=$1
+    codename=$2
+    changes=$3
+    srcpath=$4
+    version=$5
+
+    codealias=$(codename_to_version $codename)
+    versionsed="s#\\($version\\)#\\1~$codealias#"  # VERSION replacement!
+    tmppath=$(mktemp -d)
+    tmpchanges="$tmppath/$(basename "$changes" | sed -e "$versionsed")"
+    find "$srcpath" -type f | while read f; do
+        newf=$(basename "$f" | sed -e "$versionsed")
+        cp "$f" "$tmppath/$newf"
+    done
+
+    # Modify all debs with the new version.
+    (
+        mkdir "$tmppath/tmp"
+        cd "$tmppath/tmp"
+        for deb in ../*.deb; do
+            ar p "$deb" control.tar.gz | tar -xz
+            sed -i -e "$versionsed" control
+            touch -t 197001010000 control  # reproducible
+            tar cf control.tar *
+            touch -t 197001010000 control.tar  # reproducible
+            gzip -n control.tar  # reproducible
+            ar r "$deb" control.tar.gz
+            rm -f *
+        done
+        rm -rf "$tmppath/tmp"
+    )
+
+    # Update dsc version and checksums.
+    (
+        cd "$tmppath"
+        sed -i -e "$versionsed" *.dsc
+        update_checksums *.dsc *.tar.gz
+    )
+
+    # Update changes version and checksums.
+    (
+        cd "$tmppath"
+        sed -e "
+            $versionsed
+            s/Distribution: \(UNRELEASED\|stable\)/Distribution: $codename/
+            s/) \(UNRELEASED\|stable\); urgency=/) $codename; urgency=/
+        " "$changes" >"$tmpchanges"
+        update_checksums "$tmpchanges" *.dsc *.tar.gz *.deb
+    )
+
+    # Do the reprepro call.
+    (
+        cd $distro
+        echo DISTRO=$distro reprepro -C $component include $codename "$tmpchanges"
+        reprepro -C $component include $codename "$tmpchanges"
+    )
+
+    # Clean up.
+    rm -rf "$tmppath"
+}
+
+unused_autostart_gpg_agent() {
+    if test -z "$GPG_AGENT_INFO"; then
+        eval $(gpg-agent --daemon --max-cache-ttl 20)
+        GPG_PID=$(echo $GPG_AGENT_INFO | sed -e 's/.*:\([^:]*\):[0-9]*$/\1/')
+    fi
+}
+
+unused_autostop_gpg_agent() {
+    if test -n "$GPG_PID"; then
+        kill $GPG_PID
+    fi
+}
+
+
+component="${1:-}"
+action="${2:-}"
+if [ -z "$component" ] || [ -z "$action" ]; then
+    echo "Usage: reprepro-foreach COMPONENT add CHANGES_FILE" >&2
+    echo "Usage: reprepro-foreach COMPONENT remove PACKAGES..." >&2
+    echo "E.g.:  reprepro-foreach osso add /.../xyz.changes" >&2
+    echo "E.g.:  reprepro-foreach osso remove gocollect gocollect-osso" >&2
+    exit 1
+fi
+shift
+shift
+
+case $action in
+add)
+    changes="${1:-}"
+    ! test -f "$changes" && echo "'add' takes *.changes file" >&2 && exit 1
+    shift
+    test $# -gt 0 && echo "Unexpected arguments" >&2 && exit 1
+    path=$(dirname "$changes")
+    version=$(sed -e '/^Version:/!d;s/[^:]*: //;s/\([\]\[.*]\)/\\1/g' "$changes")
+    for distro in $DISTROS; do
+        for code in $(codenames_for_distro_component $distro $component); do
+            reprepro_add $distro $code "$changes" "$path" "$version"
+        done
+    done
+    ;;
+remove)
+    for distro in $DISTROS; do
+        for code in $(codenames_for_distro_component $distro $component); do
+            cd $distro
+            echo DISTRO=$distro reprepro -C $component remove $code $*
+            reprepro -C $component remove $code "$@" || exit $?
+            cd ..
+        done
+    done
+    ;;
+*)
+    for distro in $DISTROS; do
+        for code in $(codenames_for_distro_component $distro $component); do
+            cd $distro
+            echo DISTRO=$distro reprepro -C $component $action $code $*
+            cd ..
+        done
+    done
+    ;;
+esac
+
+exit 0
