@@ -12,6 +12,7 @@ Changes
   - release: Experiment with increasing version numbers for releases of
     the same build on different operating system versions.
 
+  - core.meta: Add optional custom (node-specific) data to be passed.
   - os.distro: Prefer os-release over lsb_release parsing.
   - os.storage: Reduce fluctuating listings (zfs, magicfs, tmpfs).
 
