@@ -1,7 +1,7 @@
 Changes
 -------
 
-* v0.5.X [XXXXXXXXXX]:
+* v0.5.0 [2017-01-19]:
 
   - core: Added 'api_key' key in the config file to set the API key to
     authenticate to the collector server.
