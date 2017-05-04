@@ -136,8 +136,7 @@ func register(registerURL string, coreIDData Collected,
 	}
 
 	os.MkdirAll(path.Dir(regidFilename), 0755)
-	err = ioutil.WriteFile(
-		"/var/lib/gocollect/core.id.regid", []byte(value), 0400)
+	err = ioutil.WriteFile(regidFilename, []byte(value), 0400)
 	if err != nil {
 		logger.Fatal("Could not write core.id.regid: ", err)
 		return false
