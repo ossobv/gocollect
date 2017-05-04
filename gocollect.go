@@ -3,7 +3,6 @@
 package main
 
 import (
-	"./gocollector"
 	"bytes"
 	"fmt"
 	getopt "github.com/kesselborn/go-getopt"
@@ -14,6 +13,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/ossobv/gocollect/gocollector"
 )
 
 // Initialized by -X ldflag. (Should be const, but is not allowed by the

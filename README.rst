@@ -27,8 +27,13 @@ Installing
 
 You may need to set up a go path first::
 
-    mkdir -p ~/.local/go
-    export GOPATH=~/.local/go
+    mkdir -p ~/go
+    export GOPATH=~/go
+
+And check this out inside that::
+
+    git clone https://github.com/ossobv/gocollect \
+      $GOPATH/src/github.com/ossobv/gocollect
 
 And install prerequisites::
 
