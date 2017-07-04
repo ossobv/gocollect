@@ -24,7 +24,7 @@ type Collectors map[string]string
 //
 // The paths are scanned in reverse order. The file name is the unique
 // key name. If the file is not executable, the collector is stored
-// without path to signifiy that it's disabled.
+// without path to signify that it's disabled.
 func FindShellCollectors(paths []string) *Collectors {
 	ret := Collectors{}
 
@@ -112,7 +112,7 @@ func (c *Collectors) Run(key string) gocdata.Data {
 	// a zero exit anyway.  We'll have to check for valid JS below
 	// instead.
 	if e != nil {
-		// probably: !cmd.ProcessState.Success()
+		// Probably: !cmd.ProcessState.Success()
 		goclog.Log.Printf(
 			"collector[%s]: %s error: %s", key, execpath, e.Error())
 		return nil

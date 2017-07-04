@@ -14,80 +14,114 @@ import (
 	"github.com/ossobv/gocollect/gocshell"
 )
 
+type runInfo struct {
+	runner     *Runner
+	collectors *gocshell.Collectors
+	coreIDData gocdata.Data
+}
+
 // Run collects data from the collectors and pushes data to the central
 // server. If needed, it registers first.
 func (r *Runner) Run() bool {
-	// Collect all collectors based on the supplied paths.
-	collectors := gocshell.FindShellCollectors(r.CollectorsPaths)
+	runner := runInfo{runner: r}
 
-	// Set default timeout to 45 seconds.
+	// Initialize HTTP calls.
 	httpInit()
 	defer httpFinish()
 
+	// Collect all collectors based on the supplied paths.
+	runner.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
+
 	// Fetch the core info -- which also fetches the regid.
-	coreIDData := collectors.Run("core.id")
-	if coreIDData == nil {
+	if !runner.setCoreIDData() {
+		return false
+	}
+
+	// Check if we need to register first.
+	if runner.needsRegister() {
+		if !runner.runRegister() {
+			return false
+		}
+	}
+
+	// Then run all collectors.
+	runner.runAll()
+	return true
+}
+
+func (ri *runInfo) setCoreIDData() bool {
+	ri.coreIDData = ri.collectors.Run("core.id")
+	if ri.coreIDData == nil {
 		return false
 	}
 
 	// Patch core.id with our version and optional apiKey.
-	coreIDData.SetString("gocollect", r.GoCollectVersion)
-	if r.APIKey != "" {
-		coreIDData.SetString("gocollect-apikey", r.APIKey)
+	ri.coreIDData.SetString("gocollect", ri.runner.GoCollectVersion)
+	if ri.runner.APIKey != "" {
+		ri.coreIDData.SetString("gocollect-apikey", ri.runner.APIKey)
 	}
 
-	// Check if we need to register first.
-	regid := coreIDData.GetString("regid")
+	return true
+}
+
+func (ri *runInfo) needsRegister() bool {
+	return ri.coreIDData.GetString("regid") == ""
+}
+
+func (ri *runInfo) runRegister() bool {
+	regid := ri.coreIDData.GetString("regid")
 	if regid == "" {
 		// Post data, expect {"data":{"regid":"12345"}}.
-		result := r.register(coreIDData)
+		result := ri.runner.register(ri.coreIDData)
 		if !result {
 			return false
 		}
 
 		// Re-get core.id data: this time we must have regid or core.id
 		// is broken (or the registration helper).
-		coreIDData = collectors.Run("core.id")
-		if coreIDData == nil {
+		ri.coreIDData = ri.collectors.Run("core.id")
+		if ri.coreIDData == nil {
 			return false
 		}
 
-		regid = coreIDData.GetString("regid")
+		regid = ri.coreIDData.GetString("regid")
 		if regid == "" {
 			goclog.Log.Fatal("No regid after register from core.id")
 			return false
 		}
 	}
 
+	return true
+}
+
+func (ri *runInfo) runAll() {
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
-	for _, collectorKey := range collectors.Runnable() {
+	for _, collectorKey := range ri.collectors.Runnable() {
 		var collected gocdata.Data
 
 		switch collectorKey {
 		case "core.id":
 			// No need to fetch it again. And besides, we patched it
 			// above to contain the version as well.
-			collected = coreIDData
+			collected = ri.coreIDData
 		default:
 			// Exec the collector.
-			collected = collectors.Run(collectorKey)
+			collected = ri.collectors.Run(collectorKey)
 		}
 
 		if collected == nil {
-			//logger.Printf("collector[%s]: exec fail", collectorKey)
+			// DBG: logger.Printf("collector[%s]: exec fail", collectorKey)
 			continue
 		}
 
 		// We update the pushURL for every push because the _collector
 		// is in it, which changes continuously.
 		extraContext["_collector"] = collectorKey
-		tmpPushURL := coreIDData.BuildString(r.PushURL, &extraContext)
+		pushURL := ri.coreIDData.BuildString(ri.runner.PushURL, &extraContext)
 
-		r.push(tmpPushURL, collected)
+		ri.runner.push(pushURL, collected)
 	}
-
-	return true
 }
 
 func (r *Runner) register(coreIDData gocdata.Data) bool {
