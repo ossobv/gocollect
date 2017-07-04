@@ -1,6 +1,6 @@
-// Package gocollector is the core of the GoCollect daemon. It collects
-// data through supplied scripts, writes data to a central server.
-package gocollector
+// Package gocshell (gocollect) makes shell-script plugins available for
+// collection.
+package gocshell
 
 import (
 	"io/ioutil"
@@ -8,6 +8,9 @@ import (
 	"os/exec"
 	"path"
 	"sort"
+
+	"github.com/ossobv/gocollect/gocdata"
+	"github.com/ossobv/gocollect/goclog"
 )
 
 // Collectors holds a key/value map of strings where key is the
@@ -16,13 +19,13 @@ import (
 // disabled.
 type Collectors map[string]string
 
-// NewFromPaths returns a Collectors object that holds all runnable
+// FindShellCollectors returns a object that holds all runnable
 // collector scripts found in the supplied paths.
 //
 // The paths are scanned in reverse order. The file name is the unique
 // key name. If the file is not executable, the collector is stored
 // without path to signifiy that it's disabled.
-func NewFromPaths(paths []string) *Collectors {
+func FindShellCollectors(paths []string) *Collectors {
 	ret := Collectors{}
 
 	last := len(paths) - 1
@@ -63,8 +66,8 @@ func (c *Collectors) Runnable() (keys []string) {
 	return keys
 }
 
-// Run runs the collector named by key and returns a Collected object.
-func (c *Collectors) Run(key string) Collected {
+// Run runs the collector named by key and returns a Data object.
+func (c *Collectors) Run(key string) gocdata.Data {
 	// Create a clean environment without LC_ALL to mess up output.
 	// But make sure there is a valid path so we can find useful
 	// binaries like ip(1).
@@ -81,7 +84,7 @@ func (c *Collectors) Run(key string) Collected {
 	// executable, which is a hint that we shouldn't run it.
 	execpath := (*c)[key]
 	if execpath == "" {
-		logger.Printf("collector[%s]: no execpath", key)
+		goclog.Log.Printf("collector[%s]: no execpath", key)
 		return nil
 	}
 
@@ -97,7 +100,7 @@ func (c *Collectors) Run(key string) Collected {
 		stdout, e = cmd.Output()
 	} else {
 		// Go without timeout.
-		logger.Printf(
+		goclog.Log.Printf(
 			"collector[%s]: no timeout binary found to use", key)
 		cmd = exec.Command(execpath)
 		cmd.Env = cleanEnv
@@ -110,16 +113,16 @@ func (c *Collectors) Run(key string) Collected {
 	// instead.
 	if e != nil {
 		// probably: !cmd.ProcessState.Success()
-		logger.Printf(
+		goclog.Log.Printf(
 			"collector[%s]: %s error: %s", key, execpath, e.Error())
 		return nil
 	}
 
-	ret, e := NewCollected(stdout)
+	ret, e := gocdata.New(stdout)
 	if e != nil {
-		logger.Printf(
+		goclog.Log.Printf(
 			"collector[%s]: decode error: %s", key, e.Error())
-		logger.Printf("collector[%s]: data: %s", key, stdout)
+		goclog.Log.Printf("collector[%s]: data: %s", key, stdout)
 	}
 
 	return ret

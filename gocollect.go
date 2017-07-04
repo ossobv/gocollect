@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ossobv/gocollect/gocollector"
+	"github.com/ossobv/gocollect/goclog"
+	"github.com/ossobv/gocollect/gocrun"
 )
 
 // Initialized by -X ldflag. (Should be const, but is not allowed by the
@@ -141,7 +142,7 @@ func parseConfigWithIncludes(config *configMap, filename string,
 }
 
 func debugPrintConfig(config configMap) {
-	for key, _ := range config {
+	for key := range config {
 		for _, val := range config[key] {
 			fmt.Printf("%s = %s\n", key, val)
 		}
@@ -162,28 +163,23 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 	}
 }
 
-type runArgs struct {
-	apiKey string
-	registerURL string
-	pushURL string
-	collectorsPaths []string
-	oneShot bool
-}
+func createCollectRunner(
+	options map[string]getopt.OptionValue, config configMap) (
+	ret gocrun.Runner) {
 
-func extractRunArgs(options map[string]getopt.OptionValue, config configMap) (
-		ret runArgs) {
 	// Take options and config and extract relevant values.
 	if keys, ok := config["api_key"]; ok {
-		ret.apiKey = keys[len(keys)-1] // must have len>=1
+		ret.APIKey = keys[len(keys)-1] // must have len>=1
 	}
 	if urls, ok := config["register_url"]; ok {
-		ret.registerURL = urls[len(urls)-1] // must have len>=1
+		ret.RegisterURL = urls[len(urls)-1] // must have len>=1
 	}
 	if urls, ok := config["push_url"]; ok {
-		ret.pushURL = urls[len(urls)-1] // must have len>=1
+		ret.PushURL = urls[len(urls)-1] // must have len>=1
 	}
-	ret.collectorsPaths = config["collectors_path"]
-	ret.oneShot = options["one-shot"].Bool
+	ret.CollectorsPaths = config["collectors_path"]
+	ret.RegidFilename = defaultRegidFilename
+	ret.GoCollectVersion = versionStr
 
 	return ret
 }
@@ -209,36 +205,30 @@ func setupLogger(oneShot bool) *log.Logger {
 	return logger
 }
 
-func run(args runArgs) {
-	// Time for some action.
+func main() {
+	// Check basic arguments.
+	options := parseArgsOrExit()
+	oneShot := options["one-shot"].Bool
+	// Check config file.
+	config := parseConfigOrExit(options["config"].String)
+	// Passed options scan.
+	checkOptionsOrExit(options)
+	// Extract arguments, creating a CollectRunner.
+	collectRunner := createCollectRunner(options, config)
+	// Create and set global logger.
+	goclog.Log = setupLogger(oneShot)
+
+	// Do the work.
 	os.Chdir("/")
 	for {
-		ret := gocollector.CollectAndPostData(
-			args.registerURL, args.pushURL, args.collectorsPaths,
-			defaultRegidFilename, args.apiKey, versionStr)
-		if args.oneShot {
+		ret := collectRunner.Run()
+		if oneShot {
 			if !ret {
-				log.Fatal("CollectAndPostData returned false")
+				log.Fatal("CollectRunner.Run() returned false")
 			}
 			return
 		}
 
 		time.Sleep(4 * 3600 * time.Second)
 	}
-}
-
-func main() {
-	// Check basic arguments.
-	options := parseArgsOrExit()
-	// Check config file.
-	config := parseConfigOrExit(options["config"].String)
-	// Passed options scan.
-	checkOptionsOrExit(options)
-	// Extract arguments.
-	args := extractRunArgs(options, config)
-	// Create and set logger.
-	logger := setupLogger(args.oneShot)
-	gocollector.SetLog(logger)
-	// Do the work.
-	run(args)
 }

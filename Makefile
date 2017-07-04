@@ -2,7 +2,7 @@
 # in install-rc too.
 prefix = /usr
 
-SOURCES = $(wildcard *.go) $(wildcard gocollector/*.go)
+SOURCES = $(wildcard *.go) $(wildcard */*.go)
 COLLECTORS = $(wildcard collectors/[a-z]*.*)
 # Debian version spec says:
 # - tilde sorts before anything, so ~rc1 sorts before final
@@ -143,7 +143,7 @@ testrun: gocollect-bin
 
 pretty:
 	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
-	golint && cd gocollector && golint
+	for d in . gocrun gocdata; do golint $$d; done
 
 # .PHONY: fetch-new-package
 # fetch-new-package:

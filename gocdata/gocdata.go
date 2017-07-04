@@ -1,6 +1,6 @@
-// Package gocollector is the core of the GoCollect daemon. It collects
-// data through supplied scripts, writes data to a central server.
-package gocollector
+// Package gocdata (gocollect) holds the collected data to make it ready
+// for submittal.
+package gocdata
 
 import (
 	"bytes"
@@ -8,13 +8,15 @@ import (
 	"errors"
 	"io"
 	"strings"
+
+	"github.com/ossobv/gocollect/goclog"
 )
 
-// Collected is the interface to operate on collected data. It molds
+// Data is the interface to operate on collected data. It molds
 // collected bytes into something that implements HTTP POST method can
 // read. Additionally, it allows alterations of top-level JSON key
 // values.
-type Collected interface {
+type Data interface {
 	// The same as the io.Reader interface; used when posting data
 	// through HTTP.
 	Read(p []byte) (n int, err error)
@@ -32,8 +34,8 @@ type collectedData struct {
 	readpos int    // read-once position
 }
 
-// NewCollected creates a new Collected object from the supplied bytes.
-func NewCollected(data []byte) (Collected, error) {
+// New creates a new Data object from the supplied bytes.
+func New(data []byte) (Data, error) {
 	// Compact the data and validate it at the same time.
 	compacted := new(bytes.Buffer)
 	e := json.Compact(compacted, data)
@@ -59,28 +61,28 @@ func (c *collectedData) Read(p []byte) (n int, err error) {
 	return written, nil
 }
 
-// Get a single value from the key-values stored in the Collected data.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Key:		 fqdn
-// Returns:	 1.2.3.4
+// Get a single value from the key-values stored in the Data data.
+// Data:	{"fqdn":"1.2.3.4","regid":"12345"}
+// Key:		fqdn
+// Returns:	1.2.3.4
 func (c *collectedData) GetString(key string) string {
 	decoded := make(map[string]string)
 	e := json.Unmarshal([]byte(c.data), &decoded)
 	if e != nil {
-		// should have key here.. expand Collected[] ?
-		logger.Printf("unmarshal fail: %s", e.Error())
+		// should have key here.. expand Data[] ?
+		goclog.Log.Printf("unmarshal fail: %s", e.Error())
 	} else if val, ok := decoded[key]; ok {
 		return val
 	}
 	return ""
 }
 
-// Add/update a single string value in a Collected object.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Key:		 gocollect
-// Value:	   1.2.3
-// Returns:	 error or updates Data to look like this:
-//			  {"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
+// Add/update a single string value in a Data object.
+// Data:	{"fqdn":"1.2.3.4","regid":"12345"}
+// Key:		gocollect
+// Value:	1.2.3
+// Returns:	error or updates Data to look like this:
+//			{"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
 func (c *collectedData) SetString(key string, value string) error {
 	// Check that no one has started reading already.
 	if c.readpos != 0 {
@@ -115,8 +117,8 @@ func (c *collectedData) SetString(key string, value string) error {
 
 // Long version of GetString: here you supply a string with {key} pieces
 // which get replaced by the strings from the collected value.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Template:	http://example.com/{regid}/{fqdn}/
+// Data:	 {"fqdn":"1.2.3.4","regid":"12345"}
+// Template: http://example.com/{regid}/{fqdn}/
 // Returns:	 http://example.com/12345/1.2.3.4/
 func (c *collectedData) BuildString(
 	template string, extra *map[string]string) string {
@@ -139,7 +141,7 @@ func (c *collectedData) BuildString(
 		// I need because IndexByte doesn't take a start-parameter.
 		j := strings.IndexByte(template[i:], '}')
 		if j == -1 {
-			logger.Printf("missing tailing brace: %s", template)
+			goclog.Log.Printf("missing tailing brace: %s", template)
 			break
 		}
 		j += i
