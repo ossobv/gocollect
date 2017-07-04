@@ -27,6 +27,7 @@ var versionStr string
 type configMap map[string]([]string)
 
 const defaultConfigFile = "/etc/gocollect.conf"
+const defaultRegidFilename = "/var/lib/gocollect/core.id.regid"
 
 var optionDefinition = getopt.Options{
 	("GoCollect collects data through a series of scripts and publishes it\n" +
@@ -43,7 +44,7 @@ var optionDefinition = getopt.Options{
 func version() {
 	fmt.Printf(
 		("gocollect (GoCollect sysinfo collector) %s\n" +
-			"Copyright (C) 2016 OSSO B.V.\n" +
+			"Copyright (C) 2016-2017 OSSO B.V.\n" +
 			"License GPLv3+: GNU GPL version 3 or later " +
 			"<http://gnu.org/licenses/gpl.html>.\n" +
 			"This is free software: you are free to change " +
@@ -100,6 +101,7 @@ func parseConfigOrExit(filename string) (config configMap) {
 
 	config = configMap{}
 	parseConfigWithIncludes(&config, filename, data, 0)
+	// debugPrintConfig(config)
 	return config
 }
 
@@ -138,19 +140,16 @@ func parseConfigWithIncludes(config *configMap, filename string,
 	}
 }
 
-func main() {
-	// Check basic arguments.
-	options := parseArgsOrExit()
+func debugPrintConfig(config configMap) {
+	for key, _ := range config {
+		for _, val := range config[key] {
+			fmt.Printf("%s = %s\n", key, val)
+		}
+	}
+}
 
-	// Check config file.
-	config := parseConfigOrExit(options["config"].String)
-	// for key, _ := range config {
-	//	for _, val := range config[key] {
-	//		fmt.Printf("%s = %s\n", key, val)
-	//	}
-	// }
-
-	// Passed options scan. Check that user is root.
+func checkOptionsOrExit(options map[string]getopt.OptionValue) {
+	// Check that user is root.
 	if os.Getuid() != 0 && !options["without-root"].Bool {
 		fmt.Fprintf(
 			os.Stderr,
@@ -161,25 +160,36 @@ func main() {
 			path.Base(os.Args[0]))
 		os.Exit(1)
 	}
+}
 
+type runArgs struct {
+	apiKey string
+	registerURL string
+	pushURL string
+	collectorsPaths []string
+	oneShot bool
+}
+
+func extractRunArgs(options map[string]getopt.OptionValue, config configMap) (
+		ret runArgs) {
 	// Take options and config and extract relevant values.
-	var apiKey, registerURL, pushURL string
 	if keys, ok := config["api_key"]; ok {
-		apiKey = keys[len(keys)-1] // must have len>=1
+		ret.apiKey = keys[len(keys)-1] // must have len>=1
 	}
 	if urls, ok := config["register_url"]; ok {
-		registerURL = urls[len(urls)-1] // must have len>=1
+		ret.registerURL = urls[len(urls)-1] // must have len>=1
 	}
 	if urls, ok := config["push_url"]; ok {
-		pushURL = urls[len(urls)-1] // must have len>=1
+		ret.pushURL = urls[len(urls)-1] // must have len>=1
 	}
-	collectorsPaths := config["collectors_path"]
-	oneShot := options["one-shot"].Bool
+	ret.collectorsPaths = config["collectors_path"]
+	ret.oneShot = options["one-shot"].Bool
 
-	// TODO: fix hardcoded path?
-	regidFilename := "/var/lib/gocollect/core.id.regid"
+	return ret
+}
 
-	// Drop stdin/stdout; we don't need 'm.
+func setupLogger(oneShot bool) *log.Logger {
+	// Drop stdin/stdout. We may need stderr though.
 	os.Stdin.Close()
 	os.Stdout.Close()
 
@@ -196,15 +206,17 @@ func main() {
 			logger = log.New(os.Stderr, "", log.LstdFlags)
 		}
 	}
+	return logger
+}
 
+func run(args runArgs) {
 	// Time for some action.
 	os.Chdir("/")
-	gocollector.SetLog(logger)
 	for {
 		ret := gocollector.CollectAndPostData(
-			registerURL, pushURL, collectorsPaths, regidFilename,
-			apiKey, versionStr)
-		if oneShot {
+			args.registerURL, args.pushURL, args.collectorsPaths,
+			defaultRegidFilename, args.apiKey, versionStr)
+		if args.oneShot {
 			if !ret {
 				log.Fatal("CollectAndPostData returned false")
 			}
@@ -213,4 +225,20 @@ func main() {
 
 		time.Sleep(4 * 3600 * time.Second)
 	}
+}
+
+func main() {
+	// Check basic arguments.
+	options := parseArgsOrExit()
+	// Check config file.
+	config := parseConfigOrExit(options["config"].String)
+	// Passed options scan.
+	checkOptionsOrExit(options)
+	// Extract arguments.
+	args := extractRunArgs(options, config)
+	// Create and set logger.
+	logger := setupLogger(args.oneShot)
+	gocollector.SetLog(logger)
+	// Do the work.
+	run(args)
 }
