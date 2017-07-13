@@ -126,7 +126,7 @@ func (ri *runInfo) runAll() {
 
 func (r *Runner) register(coreIDData gocdata.Data) bool {
 	// Post data, expect {"data":{"regid":"12345"}}.
-	data, err := httpPost(r.RegisterURL, coreIDData)
+	data, err := httpPost(r.RegisterURL, r.GoCollectVersion, coreIDData)
 	if err != nil {
 		goclog.Log.Printf("register[%s]: failed: %s", r.RegisterURL, err)
 		return false
@@ -157,7 +157,7 @@ func (r *Runner) register(coreIDData gocdata.Data) bool {
 }
 
 func (r *Runner) push(pushURL string, collectedData gocdata.Data) bool {
-	data, err := httpPost(pushURL, collectedData)
+	data, err := httpPost(pushURL, r.GoCollectVersion, collectedData)
 	if err != nil {
 		goclog.Log.Printf("push[%s]: failed: %s", pushURL, err)
 		return false

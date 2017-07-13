@@ -26,20 +26,19 @@ func httpInit() {
 
 // Do all HTTP cleanup/finalization.
 func httpFinish() {
-	// If keepalives work, this should close everything them down when
-	// we're done with a POST run.
+	// If the server supports connection keepalive, this will close
+	// everything down when we're done with a POST run. The daemon stays
+	// running, but we won't be doing much for a long while.
 	httpTransport.CloseIdleConnections()
 }
 
 // Perform a JSON HTTP POST call.
-func httpPost(url string, data io.Reader) ([]byte, error) {
+func httpPost(url string, version string, data io.Reader) ([]byte, error) {
 	req, err := http.NewRequest("POST", url, data)
-	req.Header.Set("Connection", "keep-alive")
+	// req.Header.Set("Connection", "keep-alive") // HTTP/1.1 auto
+	req.Header.Set("User-Agent", "GoCollect/" + version)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := httpClient.Do(req)
-	//var resp *http.Response
-	//resp, err := nil, errors.New("test")
-	//_ = http.Post
 
 	var output []byte
 	if resp != nil {
