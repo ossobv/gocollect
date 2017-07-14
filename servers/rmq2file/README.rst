@@ -20,14 +20,14 @@ Place this in ``/etc/docker/containers.d/gocollect-rmq2file.conf``::
 
     NAME=gocollect-rmq2file
     ARGS="-v /srv/gocollect-data:/srv/gocollect-data:rw \
-      -e FILE_SUBSCRIBER_AMQP_HOST=IP_HERE \
-      -e FILE_SUBSCRIBER_AMQP_VIRTUAL_HOST=VH_HERE \
-      -e FILE_SUBSCRIBER_AMQP_USERNAME=USERNAME_HERE \
-      -e FILE_SUBSCRIBER_AMQP_PASSWORD=PASSWORD_HERE \
-      -e FILE_SUBSCRIBER_AMQP_EXCHANGE_NAME=EXCHANGE_HERE \
-      -e FILE_SUBSCRIBER_AMQP_ROUTING_KEY=# \
-      -e FILE_SUBSCRIBER_AMQP_QUEUENAME=QUEUENAME_HERE \
-      -e FILE_SUBSCRIBER_AMQP_COLLECTOR_PATH=/srv/gocollect-data \
+      -e RMQ2FILE_HOST=IP_HERE \
+      -e RMQ2FILE_VIRTUAL_HOST=VH_HERE \
+      -e RMQ2FILE_USERNAME=USERNAME_HERE \
+      -e RMQ2FILE_PASSWORD=PASSWORD_HERE \
+      -e RMQ2FILE_EXCHANGE_NAME=EXCHANGE_HERE \
+      -e RMQ2FILE_ROUTING_KEY=# \
+      -e RMQ2FILE_QUEUENAME=QUEUENAME_HERE \
+      -e RMQ2FILE_COLLECTOR_PATH=/srv/gocollect-data \
       gocollect-rmq2file:latest"
 
 And use the following *Systemd* template service as

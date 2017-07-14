@@ -15,7 +15,7 @@ class MyCollector(Collector):
     Override DATADIR to use our envvar.
     """
     DATADIR = environ.get(
-        'FILE_SUBSCRIBER_AMQP_COLLECTOR_PATH', '/srv/gocollect-data')
+        'RMQ2FILE_COLLECTOR_PATH', '/srv/gocollect-data')
 
 
 def callback(ch, method, properties, body):
@@ -43,21 +43,21 @@ def callback(ch, method, properties, body):
 
 def main():
     credentials = pika.credentials.PlainCredentials(
-        environ.get('FILE_SUBSCRIBER_AMQP_USERNAME'),
-        environ.get('FILE_SUBSCRIBER_AMQP_PASSWORD'))
+        environ.get('RMQ2FILE_USERNAME'),
+        environ.get('RMQ2FILE_PASSWORD'))
 
     parameters = pika.ConnectionParameters(
-        host=environ.get('FILE_SUBSCRIBER_AMQP_HOST'),
+        host=environ.get('RMQ2FILE_HOST'),
         heartbeat_interval=10,
-        virtual_host=environ.get('FILE_SUBSCRIBER_AMQP_VIRTUAL_HOST'),
+        virtual_host=environ.get('RMQ2FILE_VIRTUAL_HOST'),
         credentials=credentials)
 
     consumer = RMQConsumer(
         parameters,
         callback,
-        environ.get('FILE_SUBSCRIBER_AMQP_EXCHANGE_NAME'),
-        environ.get('FILE_SUBSCRIBER_AMQP_ROUTING_KEY', '#'),
-        environ.get('FILE_SUBSCRIBER_AMQP_QUEUENAME'))
+        environ.get('RMQ2FILE_EXCHANGE_NAME'),
+        environ.get('RMQ2FILE_ROUTING_KEY', '#'),
+        environ.get('RMQ2FILE_QUEUENAME'))
 
     try:
         logger.info('Started')
