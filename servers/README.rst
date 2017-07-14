@@ -11,6 +11,4 @@ GoCollect example server implementations
 TODO
 ----
 
-* Fix wsgi2file to actually work.
-
-* Fix problems with missing hostnames?
+* Test wsgi2file to see if it actually works.
