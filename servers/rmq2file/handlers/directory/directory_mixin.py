@@ -14,6 +14,8 @@ class DirectoryMixin(object):
                 raise
 
     def symlink(self, dest, link):
+        # Always make relative symlinks.
+        dest = self.relpath(dest, link)
         try:
             if os.readlink(link) == dest:
                 return
@@ -23,6 +25,18 @@ class DirectoryMixin(object):
             # TODO: check if symlink?
             os.unlink(link)
         os.symlink(dest, link)
+
+    def relpath(self, target, symlink):
+        assert target[0] == os.sep  # abspath
+        assert symlink[0] == os.sep  # abspath
+        targetp = target.split(os.sep)
+        symlinkp = symlink.split(os.sep)
+        for idx in range(len(min(targetp, symlinkp))):
+            if targetp[idx] != symlinkp[idx]:
+                break
+        # Don't count the SYMLINK basename (-1).
+        targetp = ['..'] * (len(symlinkp) - idx - 1) + targetp[idx:]
+        return os.sep.join(targetp)
 
     def check_key(self, key):
         """
