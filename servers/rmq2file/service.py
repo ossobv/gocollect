@@ -1,9 +1,10 @@
-import pika
-from os import environ as env
 import json
 import logging
-from handlers.directory.collector import Collector
-from rmq.rmq_consumer import RMQConsumer
+import pika
+from os import environ
+
+from lib.handlers.directory.collector import Collector
+from lib.rmq.rmq_consumer import RMQConsumer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,34 +24,37 @@ def callback(ch, method, properties, body):
 
         # Collect stuff to directory structure.
         collector = Collector(
-            env,
+            environ,
             regid,
             json_body.get('collectkey', None),
             json_body.get('seenip', None),
             data=json.dumps(json_body.get('data', {})))
         collector.collect()
-    except Exception as e:  # Never crash
-        logger.error(e.message, exc_info=True)
+    except:  # Never crash
+        logger.exception('Problem!')
 
 
 def main():
+    credentials = pika.credentials.PlainCredentials(
+        environ.get('FILE_SUBSCRIBER_AMQP_USERNAME'),
+        environ.get('FILE_SUBSCRIBER_AMQP_PASSWORD'))
+
     parameters = pika.ConnectionParameters(
-        host=env.get('FILE_SUBSCRIBER_AMQP_HOST', None),
+        host=environ.get('FILE_SUBSCRIBER_AMQP_HOST'),
         heartbeat_interval=10,
-        virtual_host=env.get('FILE_SUBSCRIBER_AMQP_VIRTUAL_HOST', None),
-        credentials=pika.credentials.PlainCredentials(
-            env.get('FILE_SUBSCRIBER_AMQP_USERNAME', None),
-            env.get('FILE_SUBSCRIBER_AMQP_PASSWORD', None)))
+        virtual_host=environ.get('FILE_SUBSCRIBER_AMQP_VIRTUAL_HOST'),
+        credentials=credentials)
 
     consumer = RMQConsumer(
         parameters,
         callback,
-        env.get('FILE_SUBSCRIBER_AMQP_EXCHANGE_NAME', None),
-        env.get('FILE_SUBSCRIBER_AMQP_ROUTING_KEY', '#'),
-        env.get('FILE_SUBSCRIBER_AMQP_QUEUENAME', None))
+        environ.get('FILE_SUBSCRIBER_AMQP_EXCHANGE_NAME'),
+        environ.get('FILE_SUBSCRIBER_AMQP_ROUTING_KEY', '#'),
+        environ.get('FILE_SUBSCRIBER_AMQP_QUEUENAME'))
+
     try:
         logger.info('Started')
         consumer.run()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         consumer.stop()
         logger.info('Exited')

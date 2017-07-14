@@ -3,8 +3,9 @@ import os
 import tempfile
 from datetime import datetime
 
+from lib.http import read_chunked
+
 from .directory_mixin import DirectoryMixin
-from ..utils import read_chunked
 
 
 def _is_file_equal(file1, file2):
@@ -47,6 +48,8 @@ class Collector(DirectoryMixin):
 
     def write_temp(self):
         if self.data is None:
+            # If we're called as a HTTP service, we need to extract the
+            # data from bodyfp.
             if self.bodylen is None:
                 body = read_chunked(self.bodyfp)
             else:

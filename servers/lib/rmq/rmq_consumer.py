@@ -1,5 +1,5 @@
-import pika
 import logging
+import pika
 
 logger = logging.getLogger(__name__)
 
