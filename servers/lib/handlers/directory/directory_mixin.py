@@ -83,13 +83,13 @@ class DirectoryMixin(object):
 
         parts = hostname.rsplit('.', 2)
         if len(parts) >= 2:
-            # "my.[example.com]" domains:
+            # Normal "my.[example.com]" style domains:
             domain = '.'.join(parts[-2:])
         elif '-' in hostname and '.' not in hostname:
-            # "[customer]-hostname" short hostnames:
+            # Internal "[customer]-hostname" style hostnames:
             domain = hostname.split('-', 1)[0]
         else:
-            # Anything else:
+            # All other domains:
             domain = 'unknown.tld'
 
         dir_ = os.path.join(self.DATADIR, 'byhostname', domain)

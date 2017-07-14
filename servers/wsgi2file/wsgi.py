@@ -48,63 +48,80 @@ class Registrar(DirectoryMixin):
         return self.regid
 
 
-def read_body(fp, length):
-    if length is None:
-        data = read_chunked(fp)
-    else:
-        data = fp.read(length)
-    return data
+class App(object):
+    def __init__(self, environ, start_response):
+        self.environ = environ
+        self.start_response = start_response
+        self.method = environ['REQUEST_METHOD']
+        # PATH_INFO is application-specific REQUEST_URI
+        self.uri = environ['PATH_INFO']
+        self.source = environ['REMOTE_ADDR']
 
+    def __iter__(self):
+        yield self.handle()
 
-def application(environ, start_response):
-    def make_response(head, headers=[], ctype='text/plain', body=b''):
-        start_response(head, headers + [
+    def handle(self):
+        if self.method == 'HEAD':
+            return self.make_response('200 OK')
+
+        elif self.method == 'POST':
+            return self.handle_post()
+
+        return self.make_response(
+            '405 Not Allowed', headers=[('Allowed', 'HEAD, POST')],
+            body=b'405\n')
+
+    def handle_post(self):
+        if self.uri == '/register/':
+            return self.handle_register()
+        elif self.uri.startswith('/update/'):
+            return self.handle_update()
+
+        return self.make_response(
+            '404 Not Found', ctype='application/json',
+            body=b'{"error": "Bad URI"}\n')
+
+    def handle_register(self):
+        registrar = Registrar(self.source, self.get_body())
+        regid = registrar.register()
+        return self.make_response(
+            '200 OK', ctype='application/json',
+            body=b'{{"data": {{"regid": "{}"}}}}\n'.format(regid))
+
+    def handle_update(self):
+        head, update, regid, collector_key, tail = self.uri.split('/')
+        assert head == '' and tail == '', (head, tail)
+        collector = Collector(
+            regid, collector_key, self.source, self.get_body())
+        collector.collect()
+        return self.make_response(
+            '200 OK', ctype='application/json', body=b'{"data": {}}\n')
+
+    def make_response(self, head, headers=[], ctype='text/plain', body=b''):
+        self.start_response(head, headers + [
             ('Content-Length', str(len(body))),
             ('Content-Type', ctype)])
         return body
 
-    method = environ['REQUEST_METHOD']
-    uri = environ['PATH_INFO']  # PATH_INFO is application-specific REQUEST_URI
-    source = environ['REMOTE_ADDR']
-
-    if method == 'HEAD':
-        yield make_response('200 OK')
-
-    elif method == 'POST':
-        # FIXME: confirm that this is https?
-        # FIXME: do auth? :)
-        # FIXME: do we allow the user to pass a different IP? perhaps we do
-        if environ.get('CONTENT_LENGTH', '').isdigit():
-            length = int(environ['CONTENT_LENGTH'])
+    def get_body(self):
+        if self.environ.get('CONTENT_LENGTH', '').isdigit():
+            length = int(self.environ['CONTENT_LENGTH'])
         else:
             length = None
+        return self.read_body(self.environ['wsgi.input'], length)
 
-        if uri == '/register/':
-            body = read_body(environ['wsgi.input'], length)
-            registrar = Registrar(source, body)
-            regid = registrar.register()
-            yield make_response(
-                '200 OK', ctype='application/json',
-                body=b'{{"data": {{"regid": "{}"}}}}\n'.format(regid))
-
-        elif uri.startswith('/update/'):
-            head, update, regid, collector_key, tail = uri.split('/')
-            assert head == '' and tail == '', (head, tail)
-            body = read_body(environ['wsgi.input'], length)
-            collector = Collector(regid, collector_key, source, body)
-            collector.collect()
-            yield make_response(
-                '200 OK', ctype='application/json', body=b'{"data": {}}\n')
-
+    @staticmethod
+    def read_body(fp, length):
+        if length is None:
+            data = read_chunked(fp)
         else:
-            yield make_response(
-                '404 Not Found', ctype='application/json',
-                body=b'{"error": "Bad URI"}\n')
+            data = fp.read(length)
+        return data
 
-    else:
-        yield make_response(
-            '405 Not Allowed', headers=[('Allowed', 'HEAD, POST')],
-            body=b'405\n')
+
+def application(environ, start_response):
+    for output in App(environ, start_response):
+        yield output
 
 
 if __name__ == '__main__':

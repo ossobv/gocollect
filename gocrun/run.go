@@ -111,7 +111,8 @@ func (ri *runInfo) runAll() {
 		}
 
 		if collected == nil {
-			// DBG: logger.Printf("collector[%s]: exec fail", collectorKey)
+			// logger.Printf(
+			//     "collector[%s]: exec fail", collectorKey)
 			continue
 		}
 

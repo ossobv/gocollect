@@ -112,7 +112,7 @@ func (c *Collectors) Run(key string) gocdata.Data {
 	// a zero exit anyway.  We'll have to check for valid JS below
 	// instead.
 	if e != nil {
-		// Probably: !cmd.ProcessState.Success()
+		// Probably '!cmd.ProcessState.Success()'.
 		goclog.Log.Printf(
 			"collector[%s]: %s error: %s", key, execpath, e.Error())
 		return nil

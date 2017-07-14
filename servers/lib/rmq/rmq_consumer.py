@@ -125,15 +125,15 @@ class RMQConsumer(object):
 
     def on_message(self, ch, method, properties, body):
         # logger.info(
-        #     'Received message # %s from %s', method.delivery_tag,
-        #     properties.app_id)
-
+        #     'Received message # %s from %s',
+        #     method.delivery_tag, properties.app_id)
         if self._callback:
             self._callback(ch, method, properties, body)
         self.acknowledge_message(method.delivery_tag)
 
     def acknowledge_message(self, delivery_tag):
-        # logger.info('Acknowledging message %s', delivery_tag)
+        # logger.info(
+        #     'Acknowledging message %s', delivery_tag)
         self._channel.basic_ack(delivery_tag)
 
     def stop_consuming(self):
