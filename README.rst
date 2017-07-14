@@ -46,8 +46,8 @@ TODO list
 Doing now:
 
 - [server] Network whitelist.
-- [server] Consolidate Jelle-code, RabbitMQ-code into this repo.
-- [server] Replace absolute symlinks with relative ones in the file store.
+- [server] Consolidate Jelle-code, RabbitMQ-code into this repo. Partially
+  completed by moving the rmq2file here.
 
 Not doing now:
 
@@ -63,9 +63,6 @@ Not doing ever:
 
 - [client] Variable random extra sleep. It's preferable to know when to expect
   updates over easing (the little extra) load on the servers.
-- [packaging] Have gocollect packages depend on same-version-of-gocollect-or-
-  higher? We could do that, but the only advantage it offers is less typing
-  for manual updates. And it's more work when creating the new package.
 
 
 Packaging for Debian

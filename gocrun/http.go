@@ -36,7 +36,7 @@ func httpFinish() {
 func httpPost(url string, version string, data io.Reader) ([]byte, error) {
 	req, err := http.NewRequest("POST", url, data)
 	// req.Header.Set("Connection", "keep-alive") // HTTP/1.1 auto
-	req.Header.Set("User-Agent", "GoCollect/" + version)
+	req.Header.Set("User-Agent", "GoCollect/"+version)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := httpClient.Do(req)
 
