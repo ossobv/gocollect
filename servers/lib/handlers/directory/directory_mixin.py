@@ -109,5 +109,3 @@ class DirectoryMixin(object):
         self.makedirs(dir_)
         # TODO: unlink old refs??
         self.symlink(self.get_nodedir(), link)
-
-# vim: set ts=8 sw=4 sts=4 et ai

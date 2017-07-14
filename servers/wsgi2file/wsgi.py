@@ -1,6 +1,3 @@
-# TODO: This is incomplete! This should call into handlers/directory/*.
-# TODO: send_response() and friends should add Content-Length for haproxy
-# keep-alive functioning.
 """
 Example GoCollect wsgi server that stores the collected items in a
 filesystem tree.
@@ -55,18 +52,23 @@ def read_body(fp, length):
     if length is None:
         data = read_chunked(fp)
     else:
-        data = fp.read(bodylen)
+        data = fp.read(length)
     return data
 
 
 def application(environ, start_response):
+    def make_response(head, headers=[], ctype='text/plain', body=b''):
+        start_response(head, headers + [
+            ('Content-Length', str(len(body))),
+            ('Content-Type', ctype)])
+        return body
+
     method = environ['REQUEST_METHOD']
     uri = environ['PATH_INFO']  # PATH_INFO is application-specific REQUEST_URI
     source = environ['REMOTE_ADDR']
 
     if method == 'HEAD':
-        start_response('200 OK', [])
-        yield b''
+        yield make_response('200 OK')
 
     elif method == 'POST':
         # FIXME: confirm that this is https?
@@ -81,28 +83,28 @@ def application(environ, start_response):
             body = read_body(environ['wsgi.input'], length)
             registrar = Registrar(source, body)
             regid = registrar.register()
-            start_response(
-                '200 OK', [('Content-Type', 'application/json')])
-            yield b'{{"data": {{"regid": "{}"}}}}\n'.format(regid)
+            yield make_response(
+                '200 OK', ctype='application/json',
+                body=b'{{"data": {{"regid": "{}"}}}}\n'.format(regid))
 
         elif uri.startswith('/update/'):
             head, update, regid, collector_key, tail = uri.split('/')
             assert head == '' and tail == '', (head, tail)
             body = read_body(environ['wsgi.input'], length)
-            collector = Collector(regid, collector_key, source, data)
+            collector = Collector(regid, collector_key, source, body)
             collector.collect()
-            start_response(
-                '200 OK', [('Content-Type', 'application/json')])
-            yield b'{"data": {}}\n'
+            yield make_response(
+                '200 OK', ctype='application/json', body=b'{"data": {}}\n')
 
         else:
-            start_response(
-                '404 Not Found', [('Content-Type', 'application/json')])
-            yield b'{"error": "Bad URI"}\n'
+            yield make_response(
+                '404 Not Found', ctype='application/json',
+                body=b'{"error": "Bad URI"}\n')
 
     else:
-        start_response('405 Not Allowed', [('Allowed', 'HEAD, POST')])
-        yield b'405'
+        yield make_response(
+            '405 Not Allowed', headers=[('Allowed', 'HEAD, POST')],
+            body=b'405\n')
 
 
 if __name__ == '__main__':
@@ -121,9 +123,12 @@ if __name__ == '__main__':
                 yield item
         except:
             print_exc()
+            body = b'{"error": "Broken Stuff"}'
             start_response(
-                '503 Broken Stuff', [('Content-Type', 'application/json')])
-            yield '{"error": "Broken Stuff"}'
+                '503 Broken Stuff',
+                [('Content-Length', str(len(body))),
+                 ('Content-Type', 'application/json')])
+            yield body
 
     port = 8000
     httpd = make_server('', port, wrapped_application)
