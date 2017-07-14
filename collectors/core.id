@@ -26,22 +26,28 @@
 # }
 
 # fqdn: The fully qualified (hopefully) hostname.
-fqdn=`hostname -f`
-json="\"fqdn\":\"$fqdn\""
+fqdn=$(hostname -f 2>/dev/null || hostname)
 
 # ip4: The default IP4 source IP.
-ip4=`ip route get 255.255.255.255 | sed -e '
-     / dev /!d
-     s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
-     s/ *//g' | tr -d '[:cntrl:]"\\\\'`
+ip4=$(ip route get 255.255.255.255 | sed -e '
+      / dev /!d
+      s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
+      s/ *//g' | tr -d '[:cntrl:]"\\\\')
+
+# check/update fqdn
+if test "$fqdn" = "localhost" || test "$fqdn" = "localhost.localdomain"; then
+    fqdn=noname-$(echo "$ip4" | sed -e 's/\./-/g')
+fi
+
+json="\"fqdn\":\"$fqdn\""
 test -n "$ip4" && json="$json,\"ip4\":\"$ip4\""
 
 # regid: The UUID previously received when registering.
-regid=`cat /var/lib/gocollect/core.id.regid 2>/dev/null`
+regid=$(cat /var/lib/gocollect/core.id.regid 2>/dev/null)
 test -n "$regid" && json="$json,\"regid\":\"$regid\""
 
 # machine-id: Systemd style machine identification number.
-machineid=`cat /etc/machine-id 2>/dev/null | tr -d '[:cntrl:]"\\\\'`
+machineid=$(cat /etc/machine-id 2>/dev/null | tr -d '[:cntrl:]"\\\\')
 test -n "$machineid" && json="$json,\"machine-id\":\"$machineid\""
 
 # A bunch of values from dmidecode -t 1:
@@ -50,11 +56,11 @@ test -n "$machineid" && json="$json,\"machine-id\":\"$machineid\""
 # - system-manufacturer: Can be used by VM host to set customer name
 for key in system-manufacturer system-product-name system-version \
         system-serial-number system-uuid; do
-    value=`dmidecode -s $key 2>/dev/null | sed -e 's/"//;s/ *$//;/^#/d' |
-           head -n1 | tr -d '[:cntrl:]"\\\\'`
+    value=$(dmidecode -s $key 2>/dev/null | sed -e 's/"//;s/ *$//;/^#/d' |
+            head -n1 | tr -d '[:cntrl:]"\\\\')
     if test -n "$value"; then
         if test "$key" = "system-uuid"; then
-            value=`echo "$value" | tr '[:upper:]' '[:lower:]'`
+            value=$(echo "$value" | tr '[:upper:]' '[:lower:]')
         fi
         json="$json,\"$key\":\"$value\""
     fi
