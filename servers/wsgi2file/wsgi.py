@@ -31,12 +31,11 @@ Example nginx config::
         #uwsgi_modifier1 30; # UWSGI_MODIFIER_MANAGE_PATH_INFO
     }
 """
-import json
-import os
-import tempfile
 import uuid
 
-from datetime import datetime
+from lib.handlers.directory.collector import Collector
+from lib.handlers.directory.directory_mixin import DirectoryMixin
+from lib.http import read_chunked
 
 
 class Registrar(DirectoryMixin):
@@ -45,7 +44,7 @@ class Registrar(DirectoryMixin):
         # Should then fetch and return old regid? Ignore for now.
         self.seenip = seenip
         if bodylen is None:
-            data = _read_chunked(bodyfp)
+            data = read_chunked(bodyfp)
         else:
             data = bodyfp.read(bodylen)
         del data  # ignore for now..
@@ -99,21 +98,6 @@ def application(environ, start_response):
     else:
         start_response('405 Not Allowed', [('Allowed', 'HEAD, POST')])
         yield b'405'
-
-
-def _is_file_equal(file1, file2):
-    if os.path.getsize(file1) != os.path.getsize(file2):
-        return False
-    with open(file1) as fp1:
-        with open(file2) as fp2:
-            while True:
-                buf1 = fp1.read(8192)
-                buf2 = fp2.read(8192)
-                if buf1 != buf2:
-                    return False
-                if not buf1:
-                    break
-    return True
 
 
 if __name__ == '__main__':

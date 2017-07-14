@@ -3,25 +3,10 @@ import os
 import tempfile
 from datetime import datetime
 
+from lib.file import file_is_equal
 from lib.http import read_chunked
 
 from .directory_mixin import DirectoryMixin
-
-
-def _is_file_equal(file1, file2):
-    if os.path.getsize(file1) != os.path.getsize(file2):
-        return False
-    with open(file1) as fp1:
-        with open(file2) as fp2:
-            while True:
-                buf1 = fp1.read(8192)
-                buf2 = fp2.read(8192)
-                assert len(buf1) == len(buf2), (buf1, buf2)
-                if buf1 != buf2:
-                    return False
-                if not buf1:
-                    break
-    return True
 
 
 class Collector(DirectoryMixin):
@@ -35,10 +20,6 @@ class Collector(DirectoryMixin):
         self.bodylen = bodylen
         self.bodyfp = bodyfp
         self.data = data
-
-        # Override path
-        self.DATADIR = env.get(
-            'FILE_SUBSCRIBER_AMQP_COLLECTOR_PATH', '/srv/gocollect-data')
 
     def get_keydir(self):
         return self.get_datadir(self.collectkey)
@@ -84,7 +65,7 @@ class Collector(DirectoryMixin):
             if allfiles:
                 # Is filedata equal?
                 lastfile = os.path.join(datadir, allfiles[0])
-                if _is_file_equal(tempname, lastfile):
+                if file_is_equal(tempname, lastfile):
                     os.utime(lastfile, None)  # touch time stamp
                     return
 

@@ -10,6 +10,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class MyCollector(Collector):
+    """
+    Override DATADIR to use our envvar.
+    """
+    DATADIR = environ.get(
+        'FILE_SUBSCRIBER_AMQP_COLLECTOR_PATH', '/srv/gocollect-data')
+
+
 def callback(ch, method, properties, body):
     try:
         if isinstance(body, bytes):
@@ -23,7 +31,7 @@ def callback(ch, method, properties, body):
             return
 
         # Collect stuff to directory structure.
-        collector = Collector(
+        collector = MyCollector(
             environ,
             regid,
             json_body.get('collectkey', None),
