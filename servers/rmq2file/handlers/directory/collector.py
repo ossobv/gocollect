@@ -54,6 +54,10 @@ class Collector(DirectoryMixin):
         else:
             body = self.data
 
+        # Always write trailing LF.
+        if body and body[-1] != '\n':
+            body += '\n'
+
         temp = tempfile.NamedTemporaryFile(
             dir=self.get_keydir(), delete=False)
         try:
