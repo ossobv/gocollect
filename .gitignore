@@ -1,3 +1,10 @@
 # User files
 /gocollect
 /gocollect.conf
+
+# Python files
+__pycache__
+*.pyc
+
+# Editor files
+*.swp
