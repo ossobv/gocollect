@@ -30,19 +30,7 @@ type configMap map[string]([]string)
 const defaultConfigFile = "/etc/gocollect.conf"
 const defaultRegidFilename = "/var/lib/gocollect/core.id.regid"
 
-var optionDefinition = getopt.Options{
-	("GoCollect collects data through a series of scripts and publishes it\n" +
-		"to a central server."),
-	getopt.Definitions{
-		{"config|c", "config file", getopt.Optional, defaultConfigFile},
-		{"one-shot|s", "run once and exit", getopt.Flag, false},
-		{"without-root", "allow run as non-privileged user", getopt.Flag,
-			false},
-		{"version|V", "print version", getopt.Flag, false},
-	},
-}
-
-func version() {
+func printVersionAndExit() {
 	fmt.Printf(
 		("gocollect (GoCollect sysinfo collector) %s\n" +
 			"Copyright (C) 2016-2017 OSSO B.V.\n" +
@@ -55,33 +43,49 @@ func version() {
 			"Written by Walter Doekes. " +
 			"See <https://github.com/ossobv/gocollect>.\n"),
 		versionStr)
+	os.Exit(0)
+}
+
+func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
+	fmt.Fprintf(
+		os.Stderr, "%s: %s\n\n%s\nSee --help for more info.\n",
+		path.Base(os.Args[0]), errstr,
+		strings.TrimSpace(optionDefinition.Usage()))
+	os.Exit(1)
+}
+
+func getOptionDefinition() getopt.Options {
+	return getopt.Options{
+		// ..4...8......16......24......32......40......48......56......64
+		("GoCollect collects data through a series of scripts and publishes " +
+			"it to\na central server."),
+		getopt.Definitions{
+			{"config|c", "config file", getopt.Optional, defaultConfigFile},
+			{"one-shot|s", "run once and exit", getopt.Flag, false},
+			{"without-root", "allow run as non-privileged user", getopt.Flag,
+				false},
+			{"version|V", "print version", getopt.Flag, false},
+		},
+	}
 }
 
 func parseArgsOrExit() (options map[string]getopt.OptionValue) {
+	optionDefinition := getOptionDefinition()
 	options, arguments, passThrough, e := optionDefinition.ParseCommandLine()
+
+	// Check and print help before checking option syntax.
 	if _, ok := options["help"]; ok {
 		fmt.Print(optionDefinition.Help())
 		os.Exit(0)
-	} else if e != nil || len(arguments) > 0 {
-		errstr := "too many arguments"
-		if e != nil {
-			errstr = e.Error()
-		}
-		fmt.Fprintf(
-			os.Stderr, "%s: %s\n\n%s\nSee --help for more info.\n",
-			path.Base(os.Args[0]), errstr,
-			strings.TrimSpace(optionDefinition.Usage()))
-		os.Exit(1)
+	} else if e != nil {
+		printErrorAndExit(e.Error(), optionDefinition)
+	} else if len(arguments) > 0 {
+		printErrorAndExit("too many arguments", optionDefinition)
 	} else if val, ok := options["version"]; ok && val.Bool {
-		version()
-		os.Exit(0)
+		printVersionAndExit()
 	} else if len(passThrough) != 0 {
-		fmt.Fprintf(
-			os.Stderr,
-			"%s: excess args after -- %#v\n\n%s\nSee --help for more info.\n",
-			path.Base(os.Args[0]), passThrough,
-			strings.TrimSpace(optionDefinition.Usage()))
-		os.Exit(1)
+		errstr := fmt.Sprintf("excess args after -- %#v", passThrough)
+		printErrorAndExit(errstr, optionDefinition)
 	}
 
 	if _, ok := options["config"]; !ok {
