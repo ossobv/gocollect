@@ -4,21 +4,15 @@ import tempfile
 from datetime import datetime
 
 from lib.file import file_is_equal
-from lib.http import read_chunked
 
 from .directory_mixin import DirectoryMixin
 
 
 class Collector(DirectoryMixin):
-    def __init__(
-            self, env, regid, collectkey, seenip,
-            bodylen=None, bodyfp=None, data=None):
-        self.env = env
+    def __init__(self, regid, collectkey, seenip, data):
         self.regid = regid
         self.collectkey = collectkey
         self.seenip = seenip
-        self.bodylen = bodylen
-        self.bodyfp = bodyfp
         self.data = data
 
     def get_keydir(self):
@@ -28,28 +22,19 @@ class Collector(DirectoryMixin):
         return self.get_datalink(self.collectkey)
 
     def write_temp(self):
-        if self.data is None:
-            # If we're called as a HTTP service, we need to extract the
-            # data from bodyfp.
-            if self.bodylen is None:
-                body = read_chunked(self.bodyfp)
-            else:
-                body = self.bodyfp.read(self.bodylen)
-        else:
-            body = self.data
-
-        # Always write trailing LF.
-        if body and body[-1] != '\n':
-            body += '\n'
-
         temp = tempfile.NamedTemporaryFile(
             dir=self.get_keydir(), delete=False)
         try:
-            temp.write(body)
+            temp.write(self.data)
+
+            # Always write trailing LF.
+            if self.data and self.data[-1] != '\n':
+                temp.write('\n')
         except:
             temp.close()
             os.unlink(temp.name)
             raise
+
         return temp.name
 
     def collect(self):

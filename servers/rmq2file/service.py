@@ -21,23 +21,22 @@ class MyCollector(Collector):
 def callback(ch, method, properties, body):
     try:
         if isinstance(body, bytes):
-            body = body.decode('UTF-8')
+            body = body.decode('utf-8')
         json_body = json.loads(body)
 
-        regid = json_body.get('regid', None)
-
+        regid = json_body.get('regid')
         if regid is None:
             logger.error('No regid found!!! %s', body)
             return
 
         # Collect stuff to directory structure.
         collector = MyCollector(
-            environ,
             regid,
-            json_body.get('collectkey', None),
-            json_body.get('seenip', None),
-            data=json.dumps(json_body.get('data', {})))
+            json_body.get('collectkey'),
+            json_body.get('seenip'),
+            json.dumps(json_body.get('data', {})))
         collector.collect()
+
     except:  # Never crash
         logger.exception('Problem!')
 

@@ -39,20 +39,24 @@ from lib.http import read_chunked
 
 
 class Registrar(DirectoryMixin):
-    def __init__(self, seenip, bodylen, bodyfp):
+    def __init__(self, seenip, data):
         # TODO: Read body and determine whether we've seen this host before?
         # Should then fetch and return old regid? Ignore for now.
         self.seenip = seenip
-        if bodylen is None:
-            data = read_chunked(bodyfp)
-        else:
-            data = bodyfp.read(bodylen)
         del data  # ignore for now..
 
     def register(self):
         self.regid = str(uuid.uuid4())
         self.get_nodedir()  # create if doesn't exist yet
         return self.regid
+
+
+def read_body(fp, length):
+    if length is None:
+        data = read_chunked(fp)
+    else:
+        data = fp.read(bodylen)
+    return data
 
 
 def application(environ, start_response):
@@ -74,7 +78,8 @@ def application(environ, start_response):
             length = None
 
         if uri == '/register/':
-            registrar = Registrar(source, length, environ['wsgi.input'])
+            body = read_body(environ['wsgi.input'], length)
+            registrar = Registrar(source, body)
             regid = registrar.register()
             start_response(
                 '200 OK', [('Content-Type', 'application/json')])
@@ -83,8 +88,8 @@ def application(environ, start_response):
         elif uri.startswith('/update/'):
             head, update, regid, collector_key, tail = uri.split('/')
             assert head == '' and tail == '', (head, tail)
-            collector = Collector(regid, collector_key, source,
-                                  length, environ['wsgi.input'])
+            body = read_body(environ['wsgi.input'], length)
+            collector = Collector(regid, collector_key, source, data)
             collector.collect()
             start_response(
                 '200 OK', [('Content-Type', 'application/json')])
