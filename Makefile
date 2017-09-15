@@ -3,6 +3,7 @@
 prefix = /usr
 
 SOURCES = $(wildcard *.go) $(wildcard */*.go)
+GODIRS = $(shell find . -name '*.go' -type f | sed -e 's:/[^/]*.go$$::;s:.*/::' | sort -u)
 COLLECTORS = $(wildcard collectors/[a-z]*.*)
 # Debian version spec says:
 # - tilde sorts before anything, so ~rc1 sorts before final
@@ -143,7 +144,7 @@ testrun: gocollect-bin
 
 pretty:
 	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
-	for d in . gocrun gocdata; do golint $$d; done
+	for d in $(GODIRS); do golint $$d && (cd $$d && go vet); done
 
 # .PHONY: fetch-new-package
 # fetch-new-package:
