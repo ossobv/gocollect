@@ -5,7 +5,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	getopt "github.com/kesselborn/go-getopt"
+	getopt "github.com/ossobv/go-getopt"
 	"io/ioutil"
 	"log"
 	"log/syslog"
@@ -60,7 +60,8 @@ func getOptionDefinition() getopt.Options {
 		("GoCollect collects data through a series of scripts and publishes " +
 			"it to\na central server."),
 		getopt.Definitions{
-			{"config|c", "config file", getopt.Optional, defaultConfigFile},
+			{"config|c", "config file",
+				getopt.Optional | getopt.ExampleIsDefault, defaultConfigFile},
 			{"one-shot|s", "run once and exit", getopt.Flag, false},
 			{"without-root", "allow run as non-privileged user", getopt.Flag,
 				false},
@@ -88,11 +89,14 @@ func parseArgsOrExit() (options map[string]getopt.OptionValue) {
 		printErrorAndExit(errstr, optionDefinition)
 	}
 
-	if _, ok := options["config"]; !ok {
-		options["config"] = getopt.OptionValue{String: defaultConfigFile}
-	}
-
+	// debugPrintOptions(options)
 	return options
+}
+
+func debugPrintOptions(options map[string]getopt.OptionValue) {
+	for key, value := range options {
+		fmt.Printf("%s = %s\n", key, value)
+	}
 }
 
 func parseConfigOrExit(filename string) (config configMap) {
