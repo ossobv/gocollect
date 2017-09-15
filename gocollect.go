@@ -57,15 +57,25 @@ func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
 func getOptionDefinition() getopt.Options {
 	return getopt.Options{
 		// ..4...8......16......24......32......40......48......56......64
-		("GoCollect collects data through a series of scripts and publishes " +
-			"it to\na central server."),
-		getopt.Definitions{
-			{"config|c", "config file",
-				getopt.Optional | getopt.ExampleIsDefault, defaultConfigFile},
-			{"one-shot|s", "run once and exit", getopt.Flag, false},
-			{"without-root", "allow run as non-privileged user", getopt.Flag,
-				false},
-			{"version|V", "print version", getopt.Flag, false},
+		Description: ("GoCollect collects data through a series of scripts and " +
+			"publishes it to\na central server."),
+		Definitions: getopt.Definitions{
+			{OptionDefinition: "config|c",
+				Description:  "config file",
+				Flags:        (getopt.Optional | getopt.ExampleIsDefault),
+				DefaultValue: defaultConfigFile},
+			{OptionDefinition: "one-shot|s",
+				Description:  "run once and exit",
+				Flags:        getopt.Flag,
+				DefaultValue: false},
+			{OptionDefinition: "without-root",
+				Description:  "allow run as non-privileged user",
+				Flags:        getopt.Flag,
+				DefaultValue: false},
+			{OptionDefinition: "version|V",
+				Description:  "print version",
+				Flags:        getopt.Flag,
+				DefaultValue: false},
 		},
 	}
 }
@@ -95,7 +105,7 @@ func parseArgsOrExit() (options map[string]getopt.OptionValue) {
 
 func debugPrintOptions(options map[string]getopt.OptionValue) {
 	for key, value := range options {
-		fmt.Printf("%s = %s\n", key, value)
+		fmt.Printf("%s = %v\n", key, value)
 	}
 }
 
