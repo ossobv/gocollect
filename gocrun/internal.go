@@ -20,43 +20,10 @@ type runInfo struct {
 	coreIDData gocdata.Data
 }
 
-// Run collects data from the collectors and pushes data to the central
-// server. If needed, it registers first.
-func (r *Runner) Run() bool {
-	runner := runInfo{runner: r}
-
-	// Initialize HTTP calls.
-	httpInit()
-	defer httpFinish()
-
-	// Collect all collectors based on the supplied paths.
-	runner.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
-
-	// Fetch the core info -- which also fetches the regid.
-	if !runner.setCoreIDData() {
-		return false
-	}
-
-	// Check if we need to register first.
-	if runner.needsRegister() {
-		if !runner.runRegister() {
-			return false
-		}
-	}
-
-	// Then run all collectors.
-	runner.runAll()
-	return true
-}
-
-func (r *Runner) Get(collectorKey string) string {
-	runner := runInfo{runner: r}
-	runner.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
-	collected := runner.runCollector(collectorKey)
-	if collected == nil {
-		return ""
-	}
-	return collected.String()
+func newRunInfo(r *Runner) (ri runInfo) {
+	ri.runner = r
+	ri.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
+	return ri
 }
 
 func (ri *runInfo) setCoreIDData() bool {
@@ -82,7 +49,7 @@ func (ri *runInfo) runRegister() bool {
 	regid := ri.coreIDData.GetString("regid")
 	if regid == "" {
 		// Post data, expect {"data":{"regid":"12345"}}.
-		result := ri.runner.register(ri.coreIDData)
+		result := ri.register(ri.coreIDData)
 		if !result {
 			return false
 		}
@@ -121,7 +88,7 @@ func (ri *runInfo) runAll() {
 		extraContext["_collector"] = collectorKey
 		pushURL := ri.coreIDData.BuildString(ri.runner.PushURL, &extraContext)
 
-		ri.runner.push(pushURL, collected)
+		ri.push(pushURL, collected)
 	}
 }
 
@@ -139,40 +106,42 @@ func (ri *runInfo) runCollector(collectorKey string) gocdata.Data {
 	}
 }
 
-func (r *Runner) register(coreIDData gocdata.Data) bool {
+func (ri *runInfo) register(coreIDData gocdata.Data) bool {
+	registerURL := ri.runner.RegisterURL
+
 	// Post data, expect {"data":{"regid":"12345"}}.
-	data, err := httpPost(r.RegisterURL, r.GoCollectVersion, coreIDData)
+	data, err := httpPost(registerURL, ri.runner.GoCollectVersion, coreIDData)
 	if err != nil {
-		goclog.Log.Printf("register[%s]: failed: %s", r.RegisterURL, err)
+		goclog.Log.Printf("register[%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	var decoded map[string](map[string]string)
 	err = json.Unmarshal(data, &decoded)
 	if err != nil {
-		goclog.Log.Printf("register[%s]: failed: %s", r.RegisterURL, err)
+		goclog.Log.Printf("register[%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	value := decoded["data"]["regid"]
 	if value == "" {
-		goclog.Log.Printf("register[%s]: failed: got nothing", r.RegisterURL)
+		goclog.Log.Printf("register[%s]: failed: got nothing", registerURL)
 		return false
 	}
 
-	os.MkdirAll(path.Dir(r.RegidFilename), 0755)
-	err = ioutil.WriteFile(r.RegidFilename, []byte(value), 0400)
+	os.MkdirAll(path.Dir(ri.runner.RegidFilename), 0755)
+	err = ioutil.WriteFile(ri.runner.RegidFilename, []byte(value), 0400)
 	if err != nil {
 		goclog.Log.Fatal("Could not write core.id.regid: ", err)
 		return false
 	}
 
-	goclog.Log.Printf("register[%s]: got %s", r.RegisterURL, value)
+	goclog.Log.Printf("register[%s]: got %s", registerURL, value)
 	return true
 }
 
-func (r *Runner) push(pushURL string, collectedData gocdata.Data) bool {
-	data, err := httpPost(pushURL, r.GoCollectVersion, collectedData)
+func (ri *runInfo) push(pushURL string, collectedData gocdata.Data) bool {
+	data, err := httpPost(pushURL, ri.runner.GoCollectVersion, collectedData)
 	if err != nil {
 		goclog.Log.Printf("push[%s]: failed: %s", pushURL, err)
 		return false
