@@ -68,6 +68,10 @@ func getOptionDefinition() getopt.Options {
 				Description:  "run once and exit",
 				Flags:        getopt.Flag,
 				DefaultValue: false},
+			{OptionDefinition: "test-key|k",
+				Description:  "print single collector output on stdout",
+				Flags:        getopt.Optional,
+				DefaultValue: ""},
 			{OptionDefinition: "without-root",
 				Description:  "allow run as non-privileged user",
 				Flags:        getopt.Flag,
@@ -170,12 +174,30 @@ func debugPrintConfig(config configMap) {
 func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 	// Check that user is root.
 	if os.Getuid() != 0 && !options["without-root"].Bool {
+		if _, ok := options["test-key"]; ok {
+			fmt.Fprintf(
+				os.Stderr,
+				("%s: Beware, not running the collector as root may yield " +
+					"incomplete data.\n"),
+				path.Base(os.Args[0]))
+			// don't exit
+		} else {
+			fmt.Fprintf(
+				os.Stderr,
+				("%s: Running gocollect as non-privileged user may " +
+					"cause several\n" +
+					"collectors to return too little info. Pass --without-root " +
+					"to bypass this check.\n"),
+				path.Base(os.Args[0]))
+			os.Exit(1)
+		}
+	}
+
+	// Only allow --test-key with --one-shot.
+	if _, ok := options["test-key"]; ok && !options["one-shot"].Bool {
 		fmt.Fprintf(
 			os.Stderr,
-			("%s: Running gocollect as non-privileged user may " +
-				"cause several\n" +
-				"collectors to return too little info. Pass --without-root " +
-				"to bypass this check.\n"),
+			"%s: --test-key only works together with --one-shot.\n",
 			path.Base(os.Args[0]))
 		os.Exit(1)
 	}
@@ -203,9 +225,8 @@ func createCollectRunner(
 }
 
 func setupLogger(oneShot bool) *log.Logger {
-	// Drop stdin/stdout. We may need stderr though.
+	// Drop stdin. We may need stdout/stderr though.
 	os.Stdin.Close()
-	os.Stdout.Close()
 
 	// Initialize logger, based on oneshot boolean.
 	var logger *log.Logger
@@ -238,6 +259,19 @@ func main() {
 
 	// Do the work.
 	os.Chdir("/")
+
+	// Single test key.
+	if testKey, ok := options["test-key"]; ok {
+		result := collectRunner.Get(testKey.String)
+		if result == "" {
+			os.Exit(1)
+		}
+		fmt.Print(result)
+		return
+	}
+
+	// Do complete run.
+	os.Stdout.Close()
 	for {
 		ret := collectRunner.Run()
 		if oneShot {

@@ -21,6 +21,9 @@ type Data interface {
 	// through HTTP.
 	Read(p []byte) (n int, err error)
 
+	// Get the data as a string.
+	String() string
+
 	// Methods that operate on the JSON dictionary.
 	GetString(key string) string
 	BuildString(template string, extra *map[string]string) string
@@ -59,6 +62,10 @@ func (c *collectedData) Read(p []byte) (n int, err error) {
 		return written, io.EOF
 	}
 	return written, nil
+}
+
+func (c *collectedData) String() string {
+	return c.data
 }
 
 // Get a single value from the key-values stored in the Data data.

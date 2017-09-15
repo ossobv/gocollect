@@ -49,6 +49,16 @@ func (r *Runner) Run() bool {
 	return true
 }
 
+func (r *Runner) Get(collectorKey string) string {
+	runner := runInfo{runner: r}
+	runner.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
+	collected := runner.runCollector(collectorKey)
+	if collected == nil {
+		return ""
+	}
+	return collected.String()
+}
+
 func (ri *runInfo) setCoreIDData() bool {
 	ri.coreIDData = ri.collectors.Run("core.id")
 	if ri.coreIDData == nil {
@@ -98,18 +108,8 @@ func (ri *runInfo) runAll() {
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
 	for _, collectorKey := range ri.collectors.Runnable() {
-		var collected gocdata.Data
-
-		switch collectorKey {
-		case "core.id":
-			// No need to fetch it again. And besides, we patched it
-			// above to contain the version as well.
-			collected = ri.coreIDData
-		default:
-			// Exec the collector.
-			collected = ri.collectors.Run(collectorKey)
-		}
-
+		// Run a (patched) collector.
+		collected := ri.runCollector(collectorKey)
 		if collected == nil {
 			// logger.Printf(
 			//     "collector[%s]: exec fail", collectorKey)
@@ -122,6 +122,20 @@ func (ri *runInfo) runAll() {
 		pushURL := ri.coreIDData.BuildString(ri.runner.PushURL, &extraContext)
 
 		ri.runner.push(pushURL, collected)
+	}
+}
+
+func (ri *runInfo) runCollector(collectorKey string) gocdata.Data {
+	switch collectorKey {
+	case "core.id":
+		// Use helper.
+		if ri.coreIDData == nil {
+			ri.setCoreIDData()
+		}
+		return ri.coreIDData
+	default:
+		// Exec the collector.
+		return ri.collectors.Run(collectorKey)
 	}
 }
 
