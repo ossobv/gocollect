@@ -1,11 +1,7 @@
-.. image:: https://raw.githubusercontent.com/ossobv/gocollect/master/artwork/gocollect-logo/horizontal_color.png
-    :alt: GoCollect
+|GoCollect|
+===========
 
-----
-
-.. image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
-    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
-.. image:: https://bettercodehub.com/edge/badge/ossobv/gocollect
+|bettercodehub| |goreportcard|
 
 GoCollect collects various pieces of system info and publishes them to a
 central server.
@@ -143,8 +139,17 @@ The source code is licensed according to the GNU GPLv3+;
 see `LICENSE
 <https://github.com/ossobv/gocollect/blob/master/LICENSE>`_.
 
-The artwork -- the GoCollect logo -- is licensed according to the
+The artwork |--| the GoCollect logo |--| is licensed according to the
 *Attribution-NonCommercial-ShareAlike 4.0 International* Creative Commons
 license (CC BY-NC-SA 4.0);
 see `LICENSE.CC.BY-NC-SA.4-0.txt
 <https://github.com/ossobv/gocollect/blob/master/artwork/LICENSE.CC.BY-NC-SA.4-0.txt>`_.
+
+
+
+.. |GoCollect| image:: https://raw.githubusercontent.com/ossobv/gocollect/master/gocollect.png
+    :alt: GoCollect
+.. |bettercodehub| image:: https://bettercodehub.com/edge/badge/ossobv/gocollect
+.. |goreportcard| image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
+    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
+.. |--| unicode:: U+2013   .. en dash
