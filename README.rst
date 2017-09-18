@@ -1,5 +1,7 @@
-GoCollect
-=========
+.. image:: https://raw.githubusercontent.com/ossobv/gocollect/master/artwork/gocollect-logo/horizontal_color.png
+    :alt: GoCollect
+
+----
 
 .. image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
     :target: https://goreportcard.com/report/github.com/ossobv/gocollect
@@ -132,3 +134,17 @@ Golang notes to self
 - https://golang.org/doc/code.html
 - http://openmymind.net/
 - https://jamescun.com/golang/binary-size/
+
+
+License
+-------
+
+The source code is licensed according to the GNU GPLv3+;
+see `LICENSE
+<https://github.com/ossobv/gocollect/blob/master/LICENSE>`_.
+
+The artwork -- the GoCollect logo -- is licensed according to the
+*Attribution-NonCommercial-ShareAlike 4.0 International* Creative Commons
+license (CC BY-NC-SA 4.0);
+see `LICENSE.CC.BY-NC-SA.4-0.txt
+<https://github.com/ossobv/gocollect/blob/master/artwork/LICENSE.CC.BY-NC-SA.4-0.txt>`_.
