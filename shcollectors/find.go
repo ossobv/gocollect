@@ -31,7 +31,7 @@ func Find(paths []string) *gocdata.Collectors {
 				// Since we scan the items in reverse order, we only add
 				// the file if it didn't exist yet.
 				if _, exists := ret[name]; !exists {
-					collector := fileToCollector(&fileinfo, readpath)
+					collector := fileToCollector(fileinfo, readpath)
 					if collector != nil {
 						ret[name] = *collector
 					}
@@ -42,9 +42,9 @@ func Find(paths []string) *gocdata.Collectors {
 	return &ret
 }
 
-func fileToCollector(fileinfo *os.FileInfo, readpath string) *gocdata.Collector {
+func fileToCollector(fileinfo os.FileInfo, readpath string) *gocdata.Collector {
 	// Ignore it if it's a directory.
-	if (*fileinfo).IsDir() {
+	if fileinfo.IsDir() {
 		return nil
 	}
 
@@ -53,7 +53,7 @@ func fileToCollector(fileinfo *os.FileInfo, readpath string) *gocdata.Collector 
 		// Our runner
 		Run: runShellCollector,
 		// Set full path
-		RunArgs: path.Join(readpath, (*fileinfo).Name()),
+		RunArgs: path.Join(readpath, fileinfo.Name()),
 		// If the file is not executable, disable it
 		IsEnabled: isExecutable(fileinfo),
 	}
@@ -114,12 +114,12 @@ func runShellCollector(key string, execpath string) gocdata.Data {
 	return ret
 }
 
-func isExecutable(fileinfo *os.FileInfo) bool {
-	if (*fileinfo).IsDir() {
+func isExecutable(fileinfo os.FileInfo) bool {
+	if fileinfo.IsDir() {
 		return false
 	}
 
-	mode := (*fileinfo).Mode()
+	mode := fileinfo.Mode()
 	if (mode & 0111) == 0 {
 		return false
 	}
