@@ -16,8 +16,7 @@ import (
 // in the supplied paths.
 //
 // The paths are scanned in reverse order. The file name is the unique
-// key name. If the file is not executable, the collector is stored
-// without path to signify that it's disabled.
+// key name. If the file is not executable, the collector is disabled.
 func Find(paths []string) *gocdata.Collectors {
 	ret := gocdata.Collectors{}
 
@@ -32,21 +31,32 @@ func Find(paths []string) *gocdata.Collectors {
 				// Since we scan the items in reverse order, we only add
 				// the file if it didn't exist yet.
 				if _, exists := ret[name]; !exists {
-					collector := gocdata.Collector{
-						// Our runner
-						Run: runShellCollector,
-						// Set full path
-						RunArgs: path.Join(readpath, name),
-						// If the file is not executable, disable it
-						IsEnabled: isExecutable(fileinfo),
+					collector := fileToCollector(&fileinfo, readpath)
+					if collector != nil {
+						ret[name] = *collector
 					}
-					ret[name] = collector
 				}
 			}
 		}
 	}
-
 	return &ret
+}
+
+func fileToCollector(fileinfo *os.FileInfo, readpath string) *gocdata.Collector {
+	// Ignore it if it's a directory.
+	if (*fileinfo).IsDir() {
+		return nil
+	}
+
+	// Create a new collector.
+	return &gocdata.Collector{
+		// Our runner
+		Run: runShellCollector,
+		// Set full path
+		RunArgs: path.Join(readpath, (*fileinfo).Name()),
+		// If the file is not executable, disable it
+		IsEnabled: isExecutable(fileinfo),
+	}
 }
 
 // runShellCollector runs the collector named key, with specified
@@ -104,12 +114,12 @@ func runShellCollector(key string, execpath string) gocdata.Data {
 	return ret
 }
 
-func isExecutable(fileinfo os.FileInfo) bool {
-	if fileinfo.IsDir() {
+func isExecutable(fileinfo *os.FileInfo) bool {
+	if (*fileinfo).IsDir() {
 		return false
 	}
 
-	mode := fileinfo.Mode()
+	mode := (*fileinfo).Mode()
 	if (mode & 0111) == 0 {
 		return false
 	}

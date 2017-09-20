@@ -2,9 +2,9 @@
 # in install-rc too.
 prefix = /usr
 
-SOURCES = $(wildcard *.go) $(wildcard */*.go)
-GODIRS = $(shell find . -name '*.go' -type f | sed -e 's:/[^/]*.go$$::;s:.*/::' | sort -u)
-COLLECTORS = $(wildcard collectors/[a-z]*.*)
+SOURCES = $(shell find . -name '*.go' -type f | sort)
+GODIRS = $(shell find . -name '*.go' -type f | sed -e 's:/[^/]*.go$$::' | sort -u)
+SHCOLLECTORS = $(shell find collectors/ -maxdepth 1 -name '[a-z]*.*' -type f -perm /700 '!' -name '*.*.*' | sort)
 # Debian version spec says:
 # - tilde sorts before anything, so ~rc1 sorts before final
 # - plus and dots are allowed everywhere
@@ -43,7 +43,7 @@ install-gocollect: gocollect-bin
 	install -D gocollect $(DESTDIR)$(prefix)/sbin/gocollect
 	install -d $(DESTDIR)$(prefix)/share/man/man8
 	gzip -c gocollect.8 >$(DESTDIR)$(prefix)/share/man/man8/gocollect.8.gz
-install-collectors: $(COLLECTORS)
+install-collectors: $(SHCOLLECTORS)
 	@echo "Preparing to install collectors: $^"
 	install -d $(DESTDIR)$(prefix)/share/gocollect/collectors
 	install -m0755 -t $(DESTDIR)$(prefix)/share/gocollect/collectors $^
@@ -73,7 +73,7 @@ uninstall: uninstall-gocollect uninstall-collectors uninstall-rc
 uninstall-gocollect:
 	$(RM) $(DESTDIR)$(prefix)/sbin/gocollect
 uninstall-collectors:
-	$(RM) $(addprefix $(DESTDIR)$(prefix)/share/gocollect/,$(COLLECTORS))
+	$(RM) $(addprefix $(DESTDIR)$(prefix)/share/gocollect/,$(SHCOLLECTORS))
 	test -d "$(DESTDIR)$(prefix)/sbin" && \
 		rmdir -p $(DESTDIR)$(prefix)/sbin; true
 	test -d "$(DESTDIR)$(prefix)/share/gocollect" && \
@@ -96,11 +96,11 @@ debian-depends:
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: sed
 	@# E: gocollect: depends-on-essential-package-without-using-version depends: util-linux
 	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
-		`grep -LE '(LABELS.*optional|LABELS.*hardware-only)' $(COLLECTORS)` \
+		`grep -LE '(LABELS.*optional|LABELS.*hardware-only)' $(SHCOLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (main)'
 	@sed -e '/^# REQUIRES:/!d;s/^[^:]*: //;s/([^)]*)//g' \
-		`grep -lE 'LABELS.*hardware-only' $(COLLECTORS)` \
+		`grep -lE 'LABELS.*hardware-only' $(SHCOLLECTORS)` \
 		| grep -vE '^(awk|bash|coreutils|debianutils|dpkg|findutils|hostname|sed|util-linux)$$' \
 		| sort -u | tr '\n' ',' | sed -e 's/,$$//;s/,/, /g'; echo ' (hardware-only)'
 

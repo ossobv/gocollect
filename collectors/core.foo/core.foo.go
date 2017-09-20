@@ -1,5 +1,5 @@
-// Package collectors (gocollect) makes builtin collectors available.
-package collectors
+// Package builtincollector (gocollect) is a builtin collector.
+package builtincollector
 
 import (
 	"github.com/ossobv/gocollect/gocdata"
