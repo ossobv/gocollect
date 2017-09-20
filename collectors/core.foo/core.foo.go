@@ -2,16 +2,16 @@
 package builtincollector
 
 import (
-	"github.com/ossobv/gocollect/gocdata"
+	"github.com/ossobv/gocollect/data"
 )
 
-func runCoreMeta(key string, runargs string) gocdata.Data {
-	ret, _ := gocdata.New([]byte("{\"foo\":\"bar\"}"))
+func runCoreMeta(key string, runargs string) data.Collected {
+	ret, _ := data.NewCollected([]byte("{\"foo\":\"bar\"}"))
 	return ret
 }
 
 func init() {
-	gocdata.BuiltinCollectors["core.foo"] = gocdata.Collector{
+	data.BuiltinCollectors["core.foo"] = data.Collector{
 		Run:       runCoreMeta,
 		RunArgs:   "",
 		IsEnabled: false,

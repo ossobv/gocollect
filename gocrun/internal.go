@@ -9,21 +9,21 @@ import (
 	"os"
 	"path"
 
-	"github.com/ossobv/gocollect/gocdata"
+	"github.com/ossobv/gocollect/data"
 	"github.com/ossobv/gocollect/goclog"
 	"github.com/ossobv/gocollect/shcollectors"
 )
 
 type runInfo struct {
 	runner     *Runner
-	collectors *gocdata.Collectors
-	coreIDData gocdata.Data
+	collectors *data.Collectors
+	coreIDData data.Collected
 }
 
 func newRunInfo(r *Runner) (ri runInfo) {
 	ri.runner = r
-	ri.collectors = gocdata.MergeCollectors(
-		&gocdata.BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
+	ri.collectors = data.MergeCollectors(
+		&data.BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
 	return ri
 }
 
@@ -93,7 +93,7 @@ func (ri *runInfo) runAll() {
 	}
 }
 
-func (ri *runInfo) runCollector(collectorKey string) gocdata.Data {
+func (ri *runInfo) runCollector(collectorKey string) data.Collected {
 	switch collectorKey {
 	case "core.id":
 		// Use helper.
@@ -107,7 +107,7 @@ func (ri *runInfo) runCollector(collectorKey string) gocdata.Data {
 	}
 }
 
-func (ri *runInfo) register(coreIDData gocdata.Data) bool {
+func (ri *runInfo) register(coreIDData data.Collected) bool {
 	registerURL := ri.runner.RegisterURL
 
 	// Post data, expect {"data":{"regid":"12345"}}.
@@ -141,7 +141,7 @@ func (ri *runInfo) register(coreIDData gocdata.Data) bool {
 	return true
 }
 
-func (ri *runInfo) push(pushURL string, collectedData gocdata.Data) bool {
+func (ri *runInfo) push(pushURL string, collectedData data.Collected) bool {
 	data, err := httpPost(pushURL, ri.runner.GoCollectVersion, collectedData)
 	if err != nil {
 		goclog.Log.Printf("push[%s]: failed: %s", pushURL, err)

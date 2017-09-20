@@ -6,31 +6,31 @@ import (
 	"io/ioutil"
 
 	"github.com/ghodss/yaml"
-	"github.com/ossobv/gocollect/gocdata"
+	"github.com/ossobv/gocollect/data"
 	// "github.com/ossobv/gocollect/goclog"
 )
 
-func collect(key string, runargs string) gocdata.Data {
+func collect(key string, runargs string) data.Collected {
 	// If it exists, read /var/lib/gocollect/core.meta.js.
-	data, e := collectVarLibGocollectCoreMetaJs()
+	collected, e := collectVarLibGocollectCoreMetaJs()
 	if e == nil {
-		return data
+		return collected
 	}
 
 	// Else, try the /etc/gocollect/core.meta/*.yaml files.
 	// TODO!
-	return gocdata.Empty()
+	return data.EmptyCollected()
 }
 
-func collectVarLibGocollectCoreMetaJs() (gocdata.Data, error) {
-	data, e := ioutil.ReadFile("/var/lib/gocollect/core.meta.js")
+func collectVarLibGocollectCoreMetaJs() (data.Collected, error) {
+	collected, e := ioutil.ReadFile("/var/lib/gocollect/core.meta.js")
 	if e != nil {
-		return gocdata.Empty(), e
+		return data.EmptyCollected(), e
 	}
-	return gocdata.New(data)
+	return data.NewCollected(collected)
 }
 
-func collectEtcGocollectCoreMetaStarYaml() (gocdata.Data, error) {
+func collectEtcGocollectCoreMetaStarYaml() (data.Collected, error) {
 	// TODO: read /etc/gocollect/core.meta/*.yaml and create big json.
 	y := []byte(`foo:
   - bar
@@ -39,14 +39,14 @@ func collectEtcGocollectCoreMetaStarYaml() (gocdata.Data, error) {
 	j, err := yaml.YAMLToJSON(y)
 	if err != nil || 1 == 1 {
 		// handle log
-		return gocdata.Empty(), errors.New("error")
+		return data.EmptyCollected(), errors.New("error")
 	}
-	ret, _ := gocdata.New(j)
+	ret, _ := data.NewCollected(j)
 	return ret, nil
 }
 
 func init() {
-	gocdata.BuiltinCollectors["core.meta"] = gocdata.Collector{
+	data.BuiltinCollectors["core.meta"] = data.Collector{
 		Run:       collect,
 		RunArgs:   "",
 		IsEnabled: true,

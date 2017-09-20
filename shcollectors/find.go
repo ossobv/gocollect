@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/ossobv/gocollect/gocdata"
+	"github.com/ossobv/gocollect/data"
 	"github.com/ossobv/gocollect/goclog"
 )
 
@@ -17,8 +17,8 @@ import (
 //
 // The paths are scanned in reverse order. The file name is the unique
 // key name. If the file is not executable, the collector is disabled.
-func Find(paths []string) *gocdata.Collectors {
-	ret := gocdata.Collectors{}
+func Find(paths []string) *data.Collectors {
+	ret := data.Collectors{}
 
 	last := len(paths) - 1
 	for i := range paths {
@@ -42,14 +42,14 @@ func Find(paths []string) *gocdata.Collectors {
 	return &ret
 }
 
-func fileToCollector(fileinfo os.FileInfo, readpath string) *gocdata.Collector {
+func fileToCollector(fileinfo os.FileInfo, readpath string) *data.Collector {
 	// Ignore it if it's a directory.
 	if fileinfo.IsDir() {
 		return nil
 	}
 
 	// Create a new collector.
-	return &gocdata.Collector{
+	return &data.Collector{
 		// Our runner
 		Run: runShellCollector,
 		// Set full path
@@ -61,7 +61,7 @@ func fileToCollector(fileinfo os.FileInfo, readpath string) *gocdata.Collector {
 
 // runShellCollector runs the collector named key, with specified
 // execpath and returns a Data object.
-func runShellCollector(key string, execpath string) gocdata.Data {
+func runShellCollector(key string, execpath string) data.Collected {
 	// Create a clean environment without LC_ALL to mess up output.
 	// But make sure there is a valid path so we can find useful
 	// binaries like ip(1).
@@ -104,7 +104,7 @@ func runShellCollector(key string, execpath string) gocdata.Data {
 		return nil
 	}
 
-	ret, e := gocdata.New(stdout)
+	ret, e := data.NewCollected(stdout)
 	if e != nil {
 		goclog.Log.Printf(
 			"collector[%s]: decode error: %s", key, e.Error())
