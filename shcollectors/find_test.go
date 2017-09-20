@@ -1,13 +1,13 @@
-// Package gocshell (gocollect) makes shell-script plugins available for
-// collection.
-package gocshell
+// Package shcollectors (gocollect) makes shell-script plugins available
+// for collection.
+package shcollectors
 
 import (
 	"fmt"
 )
 
-func ExampleFindShellCollectors() {
-	collectors := FindShellCollectors([]string{"../collectors"})
+func ExampleFind() {
+	collectors := Find([]string{"../collectors"})
 
 	// collectors.Runnable() has all keys of runnable collectors.
 	runnableCount := len(collectors.Runnable())

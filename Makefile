@@ -137,10 +137,13 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect-bin
 	@echo "Created: gocollect-$(TGZ_VERSION).tar.gz"
 
 
-.PHONY: testrun pretty
+.PHONY: check pretty testrun
 testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
 	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
+
+check:
+	for d in $(GODIRS); do (cd $$d && go test); done
 
 pretty:
 	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done

@@ -30,7 +30,7 @@ push_url = http://localhost:8000/update/{regid}/{_collector}/
 #   your system. (The *last* path is leading.)
 collectors_path = /usr/share/gocollect/collectors
 collectors_path = /usr/local/share/gocollect/collectors
-collectors_path = /home/walter/gocollect/collectors
+collectors_path = /home/walter/GOPATH/src/github.com/ossobv/gocollect/collectors
 
 # Optionally include these files if available. At the moment, globbing
 # is not supported.

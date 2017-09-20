@@ -11,18 +11,20 @@ import (
 
 	"github.com/ossobv/gocollect/gocdata"
 	"github.com/ossobv/gocollect/goclog"
-	"github.com/ossobv/gocollect/gocshell"
+	"github.com/ossobv/gocollect/shcollectors"
 )
 
 type runInfo struct {
 	runner     *Runner
-	collectors *gocshell.Collectors
+	collectors *gocdata.Collectors
 	coreIDData gocdata.Data
 }
 
 func newRunInfo(r *Runner) (ri runInfo) {
 	ri.runner = r
-	ri.collectors = gocshell.FindShellCollectors(r.CollectorsPaths)
+	//	ri.collectors = MergeCollectors(
+	//		BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
+	ri.collectors = shcollectors.Find(r.CollectorsPaths)
 	return ri
 }
 

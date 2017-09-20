@@ -55,6 +55,11 @@ func New(data []byte) (Data, error) {
 	return &tmp, nil
 }
 
+// Empty creates a new empty Data object. Use when there is no data.
+func Empty() Data {
+	return &collectedData{data: ""}
+}
+
 func (c *collectedData) Read(p []byte) (n int, err error) {
 	written := copy(p, []byte(c.data[c.readpos:]))
 	c.readpos += written
