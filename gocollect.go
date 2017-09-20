@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/ossobv/gocollect/collectors" // import builtin collectors
 	"github.com/ossobv/gocollect/goclog"
 	"github.com/ossobv/gocollect/gocrun"
 )

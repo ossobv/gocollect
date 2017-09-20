@@ -15,9 +15,9 @@ type CollectorRun func(key string, runargs string) Data
 // Collector holds instructions how to call a collector.
 type Collector struct {
 	// Callable that should return Data.
-	Run   CollectorRun
+	Run CollectorRun
 	// Optional arguments to callable.
-	RunArgs      string
+	RunArgs string
 	// Whether this collector is enabled.
 	IsEnabled bool
 }
@@ -29,7 +29,24 @@ type Collector struct {
 type Collectors map[string]Collector
 
 // Global list of builtin collectors.
-var BuiltinCollectors Collectors
+var BuiltinCollectors = Collectors{}
+
+// MergeCollectors merges two lists of collectors and returns a new
+// list. The latter list takes precedence.
+func MergeCollectors(c1 *Collectors, c2 *Collectors) *Collectors {
+	n := Collectors{}
+	// Shallow copy of c2.
+	for key, collector := range *c2 {
+		n[key] = collector
+	}
+	// Copy all from c1, but only if c2 didn't set it yet.
+	for key, collector := range *c1 {
+		if _, exists := n[key]; !exists {
+			n[key] = collector
+		}
+	}
+	return &n
+}
 
 // Run runs/executes the collector and returns the data.
 func (c *Collectors) Run(key string) Data {

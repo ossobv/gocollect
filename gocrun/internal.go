@@ -22,9 +22,8 @@ type runInfo struct {
 
 func newRunInfo(r *Runner) (ri runInfo) {
 	ri.runner = r
-	//	ri.collectors = MergeCollectors(
-	//		BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
-	ri.collectors = shcollectors.Find(r.CollectorsPaths)
+	ri.collectors = gocdata.MergeCollectors(
+		&gocdata.BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
 	return ri
 }
 
