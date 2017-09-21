@@ -8,7 +8,7 @@ SHCOLLECTORS = $(shell find collectors/ -maxdepth 1 -name '[a-z]*.*' -type f -pe
 # Debian version spec says:
 # - tilde sorts before anything, so ~rc1 sorts before final
 # - plus and dots are allowed everywhere
-VERSION_FROM_DEB := sed -e '1!d;s/.*(\([^)]*\)).*/v\1debuild/' debian/changelog 2>/dev/null
+VERSION_FROM_DEB := sed -e '1!d;s/.*(\([^)]*\)).*/v\1debuild/' ../debian/changelog 2>/dev/null
 VERSION_FROM_GIT := git describe --tags --match "v[0-9]*" --abbrev=4 HEAD | \
 	sed -e 's/_/~/;s/-/+/;s/-/./'  # v0.4_rc1-3-g1234 => v0.4~rc1+3.g1234
 VERSION = $(shell $(VERSION_FROM_DEB) || $(VERSION_FROM_GIT))
