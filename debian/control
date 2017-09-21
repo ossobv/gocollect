@@ -25,8 +25,8 @@ Description: Collect rarely changing system info for server mapping.
 
 Package: gocollect-hardware
 Architecture: any
-Depends: gocollect (= ${binary:Version}), ${misc:Depends}, ipmitool,
- kmod | module-init-tools, smartmontools
+Depends: gocollect (= ${binary:Version}), ${misc:Depends}
+Recommends: ipmitool, lshw, kmod | module-init-tools, smartmontools
 Description: Collect rarely changing system info for server mapping.
  GoCollect collects various pieces of system info and publishes them to
  a central server.

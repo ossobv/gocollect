@@ -1,3 +1,14 @@
+gocollect (0.6.0-1) stable; urgency=medium
+
+  * Create v0.6.0-1 release. See CHANGES.rst for the changes.
+  * Notable changes: gocollect now supports builtin (golang) collectors.
+    The first one is 'core.meta' which now tries to read from
+    /etc/gocollect/core.meta/*.yaml. For backwards compatibility,
+    /var/lib/gocollect/core.meta.js is still preferred if it exists.
+  * Uses Recommends instead of Depends for most collector dependencies.
+
+ -- Walter Doekes <wjdoekes+gocollect@osso.nl>  Thu, 21 Sep 2017 11:31:12 +0200
+
 gocollect (0.5.0-2) stable; urgency=medium
 
   * Remove apt repository alter hack again. This was only needed in the

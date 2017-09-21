@@ -3,28 +3,36 @@
 # output every command that modifies files on the build system.
 #export DH_VERBOSE = 1
 
+# A funny dance so we can "temp"-download dependencies into
+# debian/tmp/go. We'll this package to be placed in a valid GOPATH-style
+# tree.
+TEMPGOPATH := $(CURDIR)/debian/tmp/go
+THISGOPATH := $(CURDIR)/../../../..# GOPATH/src/github.com/org/repo
+
 %:
 	dh $@
 
 override_dh_auto_build:
-	# tmp is auto-removed afterwards.
-	GOPATH=$(CURDIR)/debian/tmp/go go get github.com/kesselborn/go-getopt
-	GOPATH=$(CURDIR)/debian/tmp/go dh_auto_build
+	# If we don't have them, download the packages to TEMP.
+	# This package should be referenced from here though.
+	GOPATH=$(TEMPGOPATH):$(THISGOPATH) go get github.com/ossobv/go-getopt
+	GOPATH=$(TEMPGOPATH):$(THISGOPATH) go get github.com/ghodss/yaml
+	GOPATH=$(THISGOPATH):$(TEMPGOPATH) dh_auto_build
 
 override_dh_auto_install:
 	# Do the install manually below.
 	#dh_auto_install -- prefix=/usr
 
 override_dh_install:
-	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect install-gocollect
+	$(MAKE) -C gocollect-client DESTDIR=$(CURDIR)/debian/gocollect install-gocollect
 
 override_dh_installmodules:
-	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect install-collectors
+	$(MAKE) -C gocollect-client DESTDIR=$(CURDIR)/debian/gocollect install-collectors
 	find $(CURDIR)/debian/gocollect/usr/share/gocollect/collectors -maxdepth 1 -type f -print0 | \
 	  xargs -0 grep -l 'LABELS:.*hardware-only' | xargs -d\\n $(RM) -v
 
 	# Hardware specifics.
-	$(MAKE) DESTDIR=$(CURDIR)/debian/gocollect-hardware install-collectors
+	$(MAKE) -C gocollect-client DESTDIR=$(CURDIR)/debian/gocollect-hardware install-collectors
 	find $(CURDIR)/debian/gocollect-hardware/usr/share/gocollect/collectors -maxdepth 1 -type f -print0 | \
 	    xargs -0 grep -L 'LABELS:.*hardware-only' | xargs -d\\n $(RM) -v
 	find $(CURDIR)/debian/gocollect-hardware/usr/share/gocollect/collectors \
@@ -43,7 +51,7 @@ override_dh_installinit:
 	# Copy the rc files to the usr/share dir where we can copy them
 	# from during postinst.
 	mkdir -p $(CURDIR)/debian/gocollect/usr/share/gocollect/rc
-	cp -a rc/* $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/
+	cp -a gocollect-client/rc/* $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/
 	# W: gocollect: script-not-executable usr/share/gocollect/rc/*.sysv
 	chmod 755 $(CURDIR)/debian/gocollect/usr/share/gocollect/rc/*.sysv
 
@@ -53,7 +61,7 @@ override_dh_installexamples:
 	# for it there. Or this should use a *.local or *.d style config
 	# override.)
 	mkdir -p $(CURDIR)/debian/gocollect/etc
-	cp -a gocollect.conf.sample $(CURDIR)/debian/gocollect/etc/
+	cp -a gocollect-client/gocollect.conf.sample $(CURDIR)/debian/gocollect/etc/
 
 	# OSSO B.V. specifics.
 	mkdir -p $(CURDIR)/debian/gocollect-osso/etc
