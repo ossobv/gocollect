@@ -1,4 +1,14 @@
 GoCollect example server implementations
 ========================================
 
-* wsgi_to_filestorage: Most basic example.
+* rmq2file: File storage from RabbitMQ storage
+  (incomplete without GoCollect to RabbitMQ storage).
+
+* wsgi2file: Most basic example, taking data from the nodes to file
+  storage directly.
+
+
+TODO
+----
+
+* Test wsgi2file to see if it actually works.

@@ -1,6 +1,6 @@
-// Package gocollector is the core of the GoCollect daemon. It collects
-// data through supplied scripts, writes data to a central server.
-package gocollector
+// Package data (gocollect) holds the collected data to make it ready
+// for submittal.
+package data
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"errors"
 	"io"
 	"strings"
+
+	"github.com/ossobv/gocollect/gocollect-client/log"
 )
 
 // Collected is the interface to operate on collected data. It molds
@@ -19,6 +21,9 @@ type Collected interface {
 	// through HTTP.
 	Read(p []byte) (n int, err error)
 
+	// Get the data as a string.
+	String() string
+
 	// Methods that operate on the JSON dictionary.
 	GetString(key string) string
 	BuildString(template string, extra *map[string]string) string
@@ -27,7 +32,7 @@ type Collected interface {
 	SetString(key string, value string) error
 }
 
-type collectedData struct {
+type collected struct {
 	data    string // json-blob
 	readpos int    // read-once position
 }
@@ -46,11 +51,16 @@ func NewCollected(data []byte) (Collected, error) {
 	// beneficial for readability when storing the json as plaintext.
 	compacted.WriteByte('\n')
 
-	tmp := collectedData{data: compacted.String()}
+	tmp := collected{data: compacted.String()}
 	return &tmp, nil
 }
 
-func (c *collectedData) Read(p []byte) (n int, err error) {
+// EmptyCollected creates a new empty Collected object. Use when there is no data.
+func EmptyCollected() Collected {
+	return &collected{data: ""}
+}
+
+func (c *collected) Read(p []byte) (n int, err error) {
 	written := copy(p, []byte(c.data[c.readpos:]))
 	c.readpos += written
 	if c.readpos == len(c.data) {
@@ -59,16 +69,20 @@ func (c *collectedData) Read(p []byte) (n int, err error) {
 	return written, nil
 }
 
+func (c *collected) String() string {
+	return c.data
+}
+
 // Get a single value from the key-values stored in the Collected data.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Key:		 fqdn
-// Returns:	 1.2.3.4
-func (c *collectedData) GetString(key string) string {
+// Collected:	{"fqdn":"1.2.3.4","regid":"12345"}
+// Key:		fqdn
+// Returns:	1.2.3.4
+func (c *collected) GetString(key string) string {
 	decoded := make(map[string]string)
 	e := json.Unmarshal([]byte(c.data), &decoded)
 	if e != nil {
 		// should have key here.. expand Collected[] ?
-		logger.Printf("unmarshal fail: %s", e.Error())
+		log.Log.Printf("unmarshal fail: %s", e.Error())
 	} else if val, ok := decoded[key]; ok {
 		return val
 	}
@@ -76,12 +90,12 @@ func (c *collectedData) GetString(key string) string {
 }
 
 // Add/update a single string value in a Collected object.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Key:		 gocollect
-// Value:	   1.2.3
-// Returns:	 error or updates Data to look like this:
-//			  {"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
-func (c *collectedData) SetString(key string, value string) error {
+// Collected:	{"fqdn":"1.2.3.4","regid":"12345"}
+// Key:		gocollect
+// Value:	1.2.3
+// Returns:	error or updates Collected to look like this:
+//			{"fqdn":"1.2.3.4","regid":"12345","gocollect":"1.2.3"}
+func (c *collected) SetString(key string, value string) error {
 	// Check that no one has started reading already.
 	if c.readpos != 0 {
 		return errors.New("Cannot alter collected data after read")
@@ -115,10 +129,10 @@ func (c *collectedData) SetString(key string, value string) error {
 
 // Long version of GetString: here you supply a string with {key} pieces
 // which get replaced by the strings from the collected value.
-// Data:		{"fqdn":"1.2.3.4","regid":"12345"}
-// Template:	http://example.com/{regid}/{fqdn}/
+// Collected:	 {"fqdn":"1.2.3.4","regid":"12345"}
+// Template: http://example.com/{regid}/{fqdn}/
 // Returns:	 http://example.com/12345/1.2.3.4/
-func (c *collectedData) BuildString(
+func (c *collected) BuildString(
 	template string, extra *map[string]string) string {
 
 	decoded := make(map[string]string)
@@ -139,7 +153,7 @@ func (c *collectedData) BuildString(
 		// I need because IndexByte doesn't take a start-parameter.
 		j := strings.IndexByte(template[i:], '}')
 		if j == -1 {
-			logger.Printf("missing tailing brace: %s", template)
+			log.Log.Printf("missing tailing brace: %s", template)
 			break
 		}
 		j += i

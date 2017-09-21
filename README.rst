@@ -1,8 +1,7 @@
-GoCollect
-=========
+|GoCollect|
+===========
 
-.. image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
-    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
+|bettercodehub| |goreportcard|
 
 GoCollect collects various pieces of system info and publishes them to a
 central server.
@@ -26,40 +25,17 @@ Installing
 
 You may need to set up a go path first::
 
-    mkdir -p ~/.local/go
-    export GOPATH=~/.local/go
+    mkdir -p ~/go
+    export GOPATH=~/go
+
+And check this out inside that::
+
+    git clone https://github.com/ossobv/gocollect \
+      $GOPATH/src/github.com/ossobv/gocollect
 
 And install prerequisites::
 
-    go get github.com/kesselborn/go-getopt
-
-
-TODO list
----------
-
-Doing now:
-
-- [server] Network whitelist.
-- [server] Consolidate Jelle-code, RabbitMQ-code into this repo.
-- [server] Replace absolute symlinks with relative ones in the file store.
-
-Not doing now:
-
-- [docs] Docs from manpage into README. More docs about installing on
-  non-standard systems through make tgz.
-- [client] Fix so the installer prefers /usr/local by default.
-- [client] Optional background job for pushing authlogs?
-  ``journalctl -f -l SYSLOG_FACILITY=4 -o json``
-- [client] Inotify (or similar) to watch changes.
-- [packaging] Redo debian-depends makefile helpers. More automation.
-
-Not doing ever:
-
-- [client] Variable random extra sleep. It's preferable to know when to expect
-  updates over easing (the little extra) load on the servers.
-- [packaging] Have gocollect packages depend on same-version-of-gocollect-or-
-  higher? We could do that, but the only advantage it offers is less typing
-  for manual updates. And it's more work when creating the new package.
+    go get github.com/ossobv/go-getopt
 
 
 Packaging for Debian
@@ -106,6 +82,7 @@ do this:
 
 .. code-block:: console
 
+    $ cd gocollect-client
     $ TGZ_CONFIG=/path/to/gocollect.conf make tgz
     ...
     Created: gocollect-v0.4~rc6+1.g83d4-md5conf-c0f48c3.tar.gz
@@ -129,3 +106,26 @@ Golang notes to self
 - https://golang.org/doc/code.html
 - http://openmymind.net/
 - https://jamescun.com/golang/binary-size/
+
+
+License
+-------
+
+The source code is licensed according to the GNU GPLv3+;
+see `LICENSE
+<https://github.com/ossobv/gocollect/blob/master/LICENSE>`_.
+
+The artwork |--| the GoCollect logo |--| is licensed according to the
+*Attribution-NonCommercial-ShareAlike 4.0 International* Creative Commons
+license (CC BY-NC-SA 4.0);
+see `LICENSE.CC.BY-NC-SA.4-0.txt
+<https://github.com/ossobv/gocollect/blob/master/artwork/LICENSE.CC.BY-NC-SA.4-0.txt>`_.
+
+
+
+.. |GoCollect| image:: https://raw.githubusercontent.com/ossobv/gocollect/master/gocollect.png
+    :alt: GoCollect
+.. |bettercodehub| image:: https://bettercodehub.com/edge/badge/ossobv/gocollect
+.. |goreportcard| image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
+    :target: https://goreportcard.com/report/github.com/ossobv/gocollect
+.. |--| unicode:: U+2013   .. en dash
