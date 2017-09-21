@@ -35,32 +35,7 @@ And check this out inside that::
 
 And install prerequisites::
 
-    go get github.com/kesselborn/go-getopt
-
-
-TODO list
----------
-
-Doing now:
-
-- [server] Network whitelist.
-- [server] Consolidate Jelle-code, RabbitMQ-code into this repo. Partially
-  completed by moving the rmq2file here.
-
-Not doing now:
-
-- [docs] Docs from manpage into README. More docs about installing on
-  non-standard systems through make tgz.
-- [client] Fix so the installer prefers /usr/local by default.
-- [client] Optional background job for pushing authlogs?
-  ``journalctl -f -l SYSLOG_FACILITY=4 -o json``
-- [client] Inotify (or similar) to watch changes.
-- [packaging] Redo debian-depends makefile helpers. More automation.
-
-Not doing ever:
-
-- [client] Variable random extra sleep. It's preferable to know when to expect
-  updates over easing (the little extra) load on the servers.
+    go get github.com/ossobv/go-getopt
 
 
 Packaging for Debian
@@ -107,6 +82,7 @@ do this:
 
 .. code-block:: console
 
+    $ cd gocollect-client
     $ TGZ_CONFIG=/path/to/gocollect.conf make tgz
     ...
     Created: gocollect-v0.4~rc6+1.g83d4-md5conf-c0f48c3.tar.gz

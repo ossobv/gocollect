@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/ossobv/gocollect/data"
-	"github.com/ossobv/gocollect/goclog"
+	"github.com/ossobv/gocollect/gocollect-client/data"
+	"github.com/ossobv/gocollect/gocollect-client/log"
 )
 
 // Find returns a object that holds all runnable collector scripts found
@@ -86,7 +86,7 @@ func runShellCollector(key string, execpath string) data.Collected {
 		stdout, e = cmd.Output()
 	} else {
 		// Go without timeout.
-		goclog.Log.Printf(
+		log.Log.Printf(
 			"collector[%s]: no timeout binary found to use", key)
 		cmd = exec.Command(execpath)
 		cmd.Env = cleanEnv
@@ -99,16 +99,16 @@ func runShellCollector(key string, execpath string) data.Collected {
 	// instead.
 	if e != nil {
 		// Probably '!cmd.ProcessState.Success()'.
-		goclog.Log.Printf(
+		log.Log.Printf(
 			"collector[%s]: %s error: %s", key, execpath, e.Error())
 		return nil
 	}
 
 	ret, e := data.NewCollected(stdout)
 	if e != nil {
-		goclog.Log.Printf(
+		log.Log.Printf(
 			"collector[%s]: decode error: %s", key, e.Error())
-		goclog.Log.Printf("collector[%s]: data: %s", key, stdout)
+		log.Log.Printf("collector[%s]: data: %s", key, stdout)
 	}
 
 	return ret

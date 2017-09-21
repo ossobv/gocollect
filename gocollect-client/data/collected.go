@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ossobv/gocollect/goclog"
+	"github.com/ossobv/gocollect/gocollect-client/log"
 )
 
 // Collected is the interface to operate on collected data. It molds
@@ -82,7 +82,7 @@ func (c *collected) GetString(key string) string {
 	e := json.Unmarshal([]byte(c.data), &decoded)
 	if e != nil {
 		// should have key here.. expand Collected[] ?
-		goclog.Log.Printf("unmarshal fail: %s", e.Error())
+		log.Log.Printf("unmarshal fail: %s", e.Error())
 	} else if val, ok := decoded[key]; ok {
 		return val
 	}
@@ -153,7 +153,7 @@ func (c *collected) BuildString(
 		// I need because IndexByte doesn't take a start-parameter.
 		j := strings.IndexByte(template[i:], '}')
 		if j == -1 {
-			goclog.Log.Printf("missing tailing brace: %s", template)
+			log.Log.Printf("missing tailing brace: %s", template)
 			break
 		}
 		j += i

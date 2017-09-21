@@ -1,7 +1,7 @@
-// Package gocrun (gocollect) is the core of the GoCollect daemon. The
+// Package runner (gocollect) is the core of the GoCollect daemon. The
 // Run() method will do the collecting and submitting to the central
 // server.
-package gocrun
+package runner
 
 // Runner holds everything we need for gocollect action. Set all fields
 // to a valid value before calling Run().

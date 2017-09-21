@@ -1,6 +1,6 @@
 # User files
-/gocollect
-/gocollect.conf
+/gocollect-client/gocollect
+/gocollect-client/gocollect.conf
 
 # Python files
 __pycache__

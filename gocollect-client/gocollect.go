@@ -7,16 +7,18 @@ import (
 	"fmt"
 	getopt "github.com/ossobv/go-getopt"
 	"io/ioutil"
-	"log"
+	golog "log"
 	"log/syslog"
 	"os"
 	"path"
 	"strings"
 	"time"
 
-	_ "github.com/ossobv/gocollect/collectors" // import builtin collectors
-	"github.com/ossobv/gocollect/goclog"
-	"github.com/ossobv/gocollect/gocrun"
+	"github.com/ossobv/gocollect/gocollect-client/log"
+	"github.com/ossobv/gocollect/gocollect-client/runner"
+
+	// Import builtin collectors.
+	_ "github.com/ossobv/gocollect/gocollect-client/collectors"
 )
 
 // Initialized by -X ldflag. (Should be const, but is not allowed by the
@@ -206,7 +208,7 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 
 func createCollectRunner(
 	options map[string]getopt.OptionValue, config configMap) (
-	ret gocrun.Runner) {
+	ret runner.Runner) {
 
 	// Take options and config and extract relevant values.
 	if keys, ok := config["api_key"]; ok {
@@ -225,21 +227,21 @@ func createCollectRunner(
 	return ret
 }
 
-func setupLogger(oneShot bool) *log.Logger {
+func setupLogger(oneShot bool) *golog.Logger {
 	// Drop stdin. We may need stdout/stderr though.
 	os.Stdin.Close()
 
 	// Initialize logger, based on oneshot boolean.
-	var logger *log.Logger
+	var logger *golog.Logger
 	if oneShot {
-		logger = log.New(os.Stderr, "", log.LstdFlags)
+		logger = golog.New(os.Stderr, "", golog.LstdFlags)
 	} else {
 		tmp, err := syslog.NewLogger(syslog.LOG_DAEMON|syslog.LOG_INFO, 0)
 		if err == nil {
 			logger = tmp
 		} else {
 			fmt.Fprintf(os.Stderr, "error opening syslog: %s\n", err)
-			logger = log.New(os.Stderr, "", log.LstdFlags)
+			logger = golog.New(os.Stderr, "", golog.LstdFlags)
 		}
 	}
 	return logger
@@ -256,7 +258,7 @@ func main() {
 	// Extract arguments, creating a CollectRunner.
 	collectRunner := createCollectRunner(options, config)
 	// Create and set global logger.
-	goclog.Log = setupLogger(oneShot)
+	log.Log = setupLogger(oneShot)
 
 	// Do the work.
 	os.Chdir("/")
@@ -277,7 +279,7 @@ func main() {
 		ret := collectRunner.Run()
 		if oneShot {
 			if !ret {
-				log.Fatal("CollectRunner.Run() returned false")
+				golog.Fatal("CollectRunner.Run() returned false")
 			}
 			return
 		}

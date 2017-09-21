@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 
 	"github.com/ghodss/yaml"
-	"github.com/ossobv/gocollect/data"
+	"github.com/ossobv/gocollect/gocollect-client/data"
 	// "github.com/ossobv/gocollect/goclog"
 )
 

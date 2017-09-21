@@ -5,7 +5,7 @@ package data
 import (
 	"sort"
 
-	"github.com/ossobv/gocollect/goclog"
+	"github.com/ossobv/gocollect/gocollect-client/log"
 )
 
 // CollectorRun is the function signature to use as the Run function in
@@ -54,9 +54,9 @@ func (c *Collectors) Run(key string) Collected {
 		if collector.IsEnabled {
 			return collector.Run(key, collector.RunArgs)
 		}
-		goclog.Log.Printf("collector[%s]: is disabled", key)
+		log.Log.Printf("collector[%s]: is disabled", key)
 	} else {
-		goclog.Log.Printf("collector[%s]: does not exist", key)
+		log.Log.Printf("collector[%s]: does not exist", key)
 	}
 	return EmptyCollected()
 }

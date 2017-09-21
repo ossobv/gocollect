@@ -2,7 +2,7 @@
 package builtincollector
 
 import (
-	"github.com/ossobv/gocollect/data"
+	"github.com/ossobv/gocollect/gocollect-client/data"
 )
 
 func runCoreMeta(key string, runargs string) data.Collected {
