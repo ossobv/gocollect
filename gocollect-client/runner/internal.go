@@ -113,20 +113,20 @@ func (ri *runInfo) register(coreIDData data.Collected) bool {
 	// Post data, expect {"data":{"regid":"12345"}}.
 	data, err := httpPost(registerURL, ri.runner.GoCollectVersion, coreIDData)
 	if err != nil {
-		log.Log.Printf("register[%s]: failed: %s", registerURL, err)
+		log.Log.Printf("register[url=%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	var decoded map[string](map[string]string)
 	err = json.Unmarshal(data, &decoded)
 	if err != nil {
-		log.Log.Printf("register[%s]: failed: %s", registerURL, err)
+		log.Log.Printf("register[url=%s]: failed: %s", registerURL, err)
 		return false
 	}
 
 	value := decoded["data"]["regid"]
 	if value == "" {
-		log.Log.Printf("register[%s]: failed: got nothing", registerURL)
+		log.Log.Printf("register[url=%s]: failed: got nothing", registerURL)
 		return false
 	}
 
@@ -137,17 +137,17 @@ func (ri *runInfo) register(coreIDData data.Collected) bool {
 		return false
 	}
 
-	log.Log.Printf("register[%s]: got %s", registerURL, value)
+	log.Log.Printf("register[url=%s]: got %s", registerURL, value)
 	return true
 }
 
 func (ri *runInfo) push(pushURL string, collectedData data.Collected) bool {
 	data, err := httpPost(pushURL, ri.runner.GoCollectVersion, collectedData)
 	if err != nil {
-		log.Log.Printf("push[%s]: failed: %s", pushURL, err)
+		log.Log.Printf("push[url=%s]: failed: %s", pushURL, err)
 		return false
 	}
 
-	log.Log.Printf("push[%s]: got %s", pushURL, string(data))
+	log.Log.Printf("push[url=%s]: got %s", pushURL, string(data))
 	return true
 }
