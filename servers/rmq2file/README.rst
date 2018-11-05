@@ -1,5 +1,5 @@
 GoCollect RMQ to file service
-==============================
+==================================
 
 Consumes RabbitMQ GoCollect data and writes to a directory/file-based
 storage.
@@ -8,9 +8,9 @@ storage.
 Build docker image
 ------------------
 
-::
+Build in one directory level up::
 
-    docker build -f Dockerfile -t gocollect-rmq2file:latest ..
+    docker build --pull -t gocollect-server:latest ..
 
 
 Configuration
@@ -28,7 +28,7 @@ Place this in ``/etc/docker/containers.d/gocollect-rmq2file.conf``::
       -e RMQ2FILE_ROUTING_KEY=# \
       -e RMQ2FILE_QUEUENAME=QUEUENAME_HERE \
       -e RMQ2FILE_COLLECTOR_PATH=/srv/gocollect-data \
-      gocollect-rmq2file:latest"
+      gocollect-server:latest rmq2file"
 
 And use the following *Systemd* template service as
 ``/etc/systemd/system/docker@.service``::
