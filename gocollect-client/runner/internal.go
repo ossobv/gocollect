@@ -142,6 +142,11 @@ func (ri *runInfo) register(coreIDData data.Collected) bool {
 }
 
 func (ri *runInfo) push(pushURL string, collectedData data.Collected) bool {
+	if collectedData.IsEmpty() {
+		log.Log.Printf("push[url=%s]: not pushing empty data", pushURL)
+		return true
+	}
+
 	data, err := httpPost(pushURL, ri.runner.GoCollectVersion, collectedData)
 	if err != nil {
 		log.Log.Printf("push[url=%s]: failed: %s", pushURL, err)
