@@ -124,7 +124,7 @@ def application(environ, start_response):
         yield output
 
 
-if __name__ == '__main__':
+def main():
     # Quick and dirty WSGI test server on port 8000.
     from traceback import print_exc
     from wsgiref.simple_server import make_server

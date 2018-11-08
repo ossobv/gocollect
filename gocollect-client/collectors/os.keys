@@ -5,21 +5,31 @@
 # SUGGESTS: openssh-client(ssh-keygen)
 
 list_keys() {
+    # If ssh-keygen is new enough to support sha512, then it's new
+    # enough to support multiple ssh key output (I think).
+    if ssh-keygen -E sha512 -lf "$1" 2>/dev/null; then
+        # Also list the "default" which sshd uses in the log files. This
+        # means we often get both SHA512 hashes and others (md5,
+        # sha256).
+        ssh-keygen -lf "$1" 2>/dev/null
+
     # Older ssh-keygen will only show the fingerprint of a single key.
-    # So we iterate over the file and print the lines.
-    # Also, older ssh-keygen doesn't allow -E sha512 to specify the
-    # fingerprint hash. And, we also want the "default", because sshd
-    # uses that in the logs.
-    tmp=`mktemp`
-    while read line; do
-        echo "$line" > "$tmp"
-        # Only echo stdout if zero status.
-        out=`ssh-keygen -E sha512 -lf "$tmp" 2>/dev/null` &&
-            echo "$out" | sed -e "s#$tmp#/tmp/tempfile#g"
-        out=`ssh-keygen -lf "$tmp" 2>/dev/null` &&
-            echo "$out" | sed -e "s#$tmp#/tmp/tempfile#g"
-    done
-    rm "$tmp"
+    # So we iterate over the file and print the lines. Also, we'll need
+    # do update the "comment" which gets the filename instead.
+    else
+        tmp=$(mktemp)  # mktemp won't hand us any special chars other than dot
+        esctmp=$(echo "$tmp" | sed -e 's#[.]#\\.#g')
+        while read line; do
+            echo "$line" >"$tmp"
+            # Only echo stdout if zero status.
+            out=$(ssh-keygen -lf "$tmp" 2>/dev/null)
+            if test $? -eq 0; then
+                comment="$(echo "$line" | sed -e 's/^[^ ]* [^ ]* //;s/#/;/g')"
+                echo "$out" | sed -e "s# $esctmp # $comment #"
+            fi
+        done < "$1"
+        rm "$tmp"
+    fi
 }
 
 echo '{"ssh":['
@@ -32,8 +42,8 @@ echo '{"ssh":['
     # Readable non-empty file? If not, move to next.
     test -s "$file" || continue
 
-    escfile=`echo "$file" | sed -e 's#/#\\\/#g'`
-    list_keys < "$file" | LC_ALL=C sort -u | sed -e '
+    escfile=$(echo "$file" | sed -e 's#/#\\\/#g')
+    list_keys "$file" | LC_ALL=C sort -u | sed -e '
         s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escfile'","comment":"\3"},/'
 done | sed -e '$s/,$//'
 echo ']}'

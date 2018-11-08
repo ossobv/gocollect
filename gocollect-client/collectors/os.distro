@@ -17,17 +17,22 @@ if test -r "$OSREL"; then
     name=$(sed -e '/^NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
     # (Note that os-release is not always updated on older debian
     # (wheezy). But we can live with missing minor-version updates.)
+    # On Ubuntu, VERSION (16.04) contains a more specific version than
+    # VERSION_ID (16.04.4 LTS (Xenial Xerus)). On Cumulus Linux, the
+    # VERSION is prefixed by a name.
     version=$(sed -e '/^VERSION=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
+    # If the version is "cumulus linux 1.2.3", drop the leading
+    # keywords.
     number=$(echo "$version" |
              sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
-                     s/\([^0-9]\)0\+\([0-9]\)/\1\2/g')
+                     s/\([^0-9]\)0\+\([0-9]\)/\1\2/g;s/.* //')
     for key in VERSION_CODENAME UBUNTU_CODENAME; do
         codename=$(sed -e '/^'$key'=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
         test -n "$codename" && break
     done
     if test -z "$codename"; then
-        codename=$(sed -e '/^VERSION=/!d
-            s/^[^=]*="[^(,]*[(,] *\([A-Za-z]*\).*/\1/' "$OSREL" |
+        codename=$(sed -ne '/^VERSION=/!d
+            s/"//g;s/^[^=]*=//;s/[^(,]*[(,] *\([A-Za-z]*\).*/\1/p' "$OSREL" |
             tr '[:upper:]' '[:lower:]')
         if test -z "$codename"; then
             codename=$(sed -e '/^CPE_NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
