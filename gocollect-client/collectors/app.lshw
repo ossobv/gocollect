@@ -4,9 +4,12 @@
 # REQUIRES: lshw(lshw)
 # REQUIRES: sed(sed)
 
+# If there is no lshw, or it returns failure, return "{}".
+#
 # The sed-command replaces the "size" parameter in the "cpu" dictionary
 # with -1 because it fluctuates on certain CPUs.
-lshw -json </dev/null 2>/dev/null | sed -e '
+#
+( lshw -json </dev/null 2>/dev/null || echo '{}' ) | sed -e '
     /"id"[[:blank:]:]*"cpu",/,/"size"[[:blank:]:]*[0-9]\+/{
       s/"size"[[:blank:]:]*[0-9]\+/"size": -1/g}'
 

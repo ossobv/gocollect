@@ -4,6 +4,7 @@ import pika
 from os import environ
 
 from lib.handlers.directory.collector import Collector
+from lib.envparse import rmq_uri
 from lib.rmq.rmq_consumer import RMQConsumer
 
 logging.basicConfig(level=logging.INFO)
@@ -42,22 +43,18 @@ def callback(ch, method, properties, body):
 
 
 def main():
+    # rmq://HOST[:PORT]/VIRTUAL_HOST/EXCHANGE[/QUEUE]
+    uri = rmq_uri(environ.get('RMQ2FILE_QUEUE_URI', ''))
+
     credentials = pika.credentials.PlainCredentials(
-        environ.get('RMQ2FILE_USERNAME'),
-        environ.get('RMQ2FILE_PASSWORD'))
+        uri.username, uri.password)
 
     parameters = pika.ConnectionParameters(
-        host=environ.get('RMQ2FILE_HOST'),
-        heartbeat_interval=10,
-        virtual_host=environ.get('RMQ2FILE_VIRTUAL_HOST'),
+        host=uri.host, heartbeat_interval=10, virtual_host=uri.vhost,
         credentials=credentials)
 
     consumer = RMQConsumer(
-        parameters,
-        callback,
-        environ.get('RMQ2FILE_EXCHANGE_NAME'),
-        environ.get('RMQ2FILE_ROUTING_KEY', '#'),
-        environ.get('RMQ2FILE_QUEUENAME'))
+        parameters, callback, uri.exchange, uri.routing_key, uri.queue)
 
     try:
         logger.info('Started')

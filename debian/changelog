@@ -1,3 +1,10 @@
+gocollect (0.7.0-1) stable; urgency=medium
+
+  * Create v0.7.0-1 release. See CHANGES.rst for the changes.
+  * Test: add 85-osso-isms into motd generation.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Thu, 08 Nov 2018 14:24:15 +0100
+
 gocollect (0.6.0-2) stable; urgency=medium
 
   * Test: add 85-osso-isms into motd generation.

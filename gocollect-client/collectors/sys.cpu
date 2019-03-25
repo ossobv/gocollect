@@ -2,21 +2,30 @@
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: coreutils(head printf tr uname wc)
 # REQUIRES: sed(sed)
-# REQUIRES: util-linux(lscpu)
+# REQUIRES: util-linux(lscpu)  # optional
 
-lscpu=`lscpu 2>/dev/null`
+lscpu=$(lscpu 2>/dev/null)
 if test -n "$lscpu"; then
-	arch=`echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//'`
-	cpus=`echo "$lscpu" | sed -e '/^CPU(s)/!d;s/^[^:]*: *//'`
-	cores=`echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//'`
-	name=`echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
-	      tr '\n' ' ' | sed -e 's/ $//'`
+    arch=$(echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//')
+    cpus=$(echo "$lscpu" | sed -e '/^CPU(s)/!d;s/^[^:]*: *//')
+    cores=$(echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//')
+    name=$(echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
+           tr '\n' ' ' | sed -e 's/ $//')
 else
-	arch=`uname -p`
-	cpus=`sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l`
-	cores=`sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 | sed -e 's/.* //'`
-	name=`sed -e '/^\(vendor_id\|model\|model name\)[[:blank:]]*:/!d' /proc/cpuinfo | head -n3 |
-	      sed -e 's/^[^:]*: //' | tr '\n' ' ' | sed -e 's/  */ /g;s/^ *//;s/ *$//'`
+    arch=$(uname -p)
+    cpus=$(sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l)
+    cores=$(sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 |
+            sed -e 's/.* //')
+    name=$(sed -e '/^\(vendor_id\|model\|model name\)[[:blank:]]*:/!d' \
+           /proc/cpuinfo | head -n3 | sed -e 's/^[^:]*: //' | tr '\n' ' ' |
+           sed -e 's/  */ /g;s/^ *//;s/ *$//')
 fi
-printf '{"arch":"%s","cores":"%s","cpus":"%s","product":"%s"}\n' \
-    "$arch" "$cores" "$cpus" "$name"
+
+vulns=$(
+  ( cd /sys/devices/system/cpu/vulnerabilities 2>/dev/null &&
+    grep '^Mitigation: ' * |
+    sed -e 's/["\\]//g;s/^\([^:]*\):Mitigation: \(.*\)/"\1":"\2",/' || echo) |
+  sed -e '1s/^/{/;$s/,$//;$s/$/}/')
+
+printf '{"arch":"%s","cores":"%s","cpus":"%s","product":"%s",'\
+'"vulnerability-mitigations":%s}\n' "$arch" "$cores" "$cpus" "$name" "$vulns"

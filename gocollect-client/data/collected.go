@@ -24,6 +24,9 @@ type Collected interface {
 	// Get the data as a string.
 	String() string
 
+	// Return voidness of the data.
+	IsEmpty() bool
+
 	// Methods that operate on the JSON dictionary.
 	GetString(key string) string
 	BuildString(template string, extra *map[string]string) string
@@ -58,6 +61,11 @@ func NewCollected(data []byte) (Collected, error) {
 // EmptyCollected creates a new empty Collected object. Use when there is no data.
 func EmptyCollected() Collected {
 	return &collected{data: ""}
+}
+
+// IsEmpty returns true if the Collected data is empty.
+func (c *collected) IsEmpty() bool {
+	return c.data == "";
 }
 
 func (c *collected) Read(p []byte) (n int, err error) {

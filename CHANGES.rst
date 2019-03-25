@@ -1,6 +1,16 @@
 Changes
 -------
 
+* v0.7.0 [2018-11-08]:
+
+  - logs: Clarify that the bracketed things are urls.
+
+  - app.lshw: Return "{}" when lshw(1) is not installed.
+  - core.meta: Don't push the empty string.
+  - os.distro: Cope with alternate Cumulus Linux os-release format.
+  - os.keys: For older ssh-keygen output, add the comment back in
+  - sys.cpu: Collect CPU vulns in sys.cpu.
+
 * v0.6.0 [2017-09-21]:
 
   - build: Fix so 'go get' works. Note that you'll have to use a
