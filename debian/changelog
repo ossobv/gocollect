@@ -1,3 +1,10 @@
+gocollect (0.7.1-1) stable; urgency=medium
+
+  * Create v0.7.1-1 release. See CHANGES.rst for the changes.
+  * Use go1.10.4+ (Ubuntu/Bionic) from now on.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Thu, 11 Apr 2019 14:16:52 +0200
+
 gocollect (0.7.0-1) stable; urgency=medium
 
   * Create v0.7.0-1 release. See CHANGES.rst for the changes.
