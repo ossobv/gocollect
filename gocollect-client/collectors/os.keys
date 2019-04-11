@@ -42,8 +42,11 @@ echo '{"ssh":['
     # Readable non-empty file? If not, move to next.
     test -s "$file" || continue
 
+    # Using escfile in the sed replacement, so we must escape forward slashes
     escfile=$(echo "$file" | sed -e 's#/#\\\/#g')
     list_keys "$file" | LC_ALL=C sort -u | sed -e '
+        # Remove any backslashes and double quotes as they will break the json
+        s#\\##g;s#"##g
         s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escfile'","comment":"\3"},/'
 done | sed -e '$s/,$//'
 echo ']}'
