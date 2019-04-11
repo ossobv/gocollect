@@ -76,6 +76,8 @@ func collectEtcGocollectCoreMetaStarYaml() (data.Collected, error) {
 func getYamlData(filespath string) (map[string]([]byte), error) {
 	ret := make(map[string]([]byte))
 
+	// ReadDir reads the directory named by dirname and returns a list
+	// of directory entries sorted by filename.
 	filelist, err := ioutil.ReadDir(filespath)
 	if err != nil {
 		return nil, err

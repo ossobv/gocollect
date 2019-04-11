@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.7.1 [2019-04-11]:
+
+  - os.keys: Fix broken json when comments contained double quotes.
+
 * v0.7.0 [2018-11-08]:
 
   - logs: Clarify that the bracketed things are urls.
