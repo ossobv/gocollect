@@ -10,12 +10,13 @@ import (
 	golog "log"
 	"log/syslog"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 	"github.com/ossobv/gocollect/gocollect-client/runner"
+	"github.com/ossobv/gocollect/gocollect-client/runnerinst"
 
 	// Import builtin collectors.
 	_ "github.com/ossobv/gocollect/gocollect-client/collectors"
@@ -52,7 +53,7 @@ func printVersionAndExit() {
 func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
 	fmt.Fprintf(
 		os.Stderr, "%s: %s\n\n%s\nSee --help for more info.\n",
-		path.Base(os.Args[0]), errstr,
+		filepath.Base(os.Args[0]), errstr,
 		strings.TrimSpace(optionDefinition.Usage()))
 	os.Exit(1)
 }
@@ -60,8 +61,8 @@ func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
 func getOptionDefinition() getopt.Options {
 	return getopt.Options{
 		// ..4...8......16......24......32......40......48......56......64
-		Description: ("GoCollect collects data through a series of scripts and " +
-			"publishes it to\na central server."),
+		Description: ("GoCollect collects data through a series of scripts " +
+			"and publishes it to\na central server."),
 		Definitions: getopt.Definitions{
 			{OptionDefinition: "config|c",
 				Description:  "config file",
@@ -121,11 +122,12 @@ func parseConfigOrExit(filename string) (config configMap) {
 	if e != nil {
 		fmt.Fprintf(
 			os.Stderr, "%s: %s\n\nSee --help for more info.\n",
-			path.Base(os.Args[0]), e.Error())
+			filepath.Base(os.Args[0]), e.Error())
 		os.Exit(1)
 	}
 
 	config = configMap{}
+	config["config_path"] = []string{filepath.Dir(filename)}
 	parseConfigWithIncludes(&config, filename, data, 0)
 	// debugPrintConfig(config)
 	return config
@@ -136,7 +138,7 @@ func parseConfigWithIncludes(config *configMap, filename string,
 	if depth >= 10 {
 		fmt.Fprintf(
 			os.Stderr, "%s: Ridiculous include depth in %s config file!\n",
-			path.Base(os.Args[0]), filename)
+			filepath.Base(os.Args[0]), filename)
 		os.Exit(1)
 	}
 
@@ -180,18 +182,18 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		if _, ok := options["test-key"]; ok {
 			fmt.Fprintf(
 				os.Stderr,
-				("%s: Beware, not running the collector as root may yield " +
-					"incomplete data.\n"),
-				path.Base(os.Args[0]))
+				("%s: Beware, running the collector as non-superuser may " +
+					"yield incomplete data.\n"),
+				filepath.Base(os.Args[0]))
 			// don't exit
 		} else {
 			fmt.Fprintf(
 				os.Stderr,
 				("%s: Running gocollect as non-privileged user may " +
 					"cause several\n" +
-					"collectors to return too little info. Pass --without-root " +
-					"to bypass this check.\n"),
-				path.Base(os.Args[0]))
+					"collectors to return too little info. Pass " +
+					"--without-root to bypass this check.\n"),
+				filepath.Base(os.Args[0]))
 			os.Exit(1)
 		}
 	}
@@ -201,7 +203,7 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		fmt.Fprintf(
 			os.Stderr,
 			"%s: --test-key only works together with --one-shot.\n",
-			path.Base(os.Args[0]))
+			filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 }
@@ -220,6 +222,7 @@ func createCollectRunner(
 	if urls, ok := config["push_url"]; ok {
 		ret.PushURL = urls[len(urls)-1] // must have len>=1
 	}
+	ret.ConfigPathBase = config["config_path"][0]
 	ret.CollectorsPaths = config["collectors_path"]
 	ret.RegidFilename = defaultRegidFilename
 	ret.GoCollectVersion = versionStr
@@ -257,6 +260,8 @@ func main() {
 	checkOptionsOrExit(options)
 	// Extract arguments, creating a CollectRunner.
 	collectRunner := createCollectRunner(options, config)
+	runnerinst.SetRunner(&collectRunner)
+	defer runnerinst.SetRunner(nil)
 	// Create and set global logger.
 	log.Log = setupLogger(oneShot)
 

@@ -65,7 +65,7 @@ func EmptyCollected() Collected {
 
 // IsEmpty returns true if the Collected data is empty.
 func (c *collected) IsEmpty() bool {
-	return c.data == "";
+	return c.data == ""
 }
 
 func (c *collected) Read(p []byte) (n int, err error) {

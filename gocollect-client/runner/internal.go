@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/ossobv/gocollect/gocollect-client/data"
 	"github.com/ossobv/gocollect/gocollect-client/log"
@@ -130,7 +130,7 @@ func (ri *runInfo) register(coreIDData data.Collected) bool {
 		return false
 	}
 
-	os.MkdirAll(path.Dir(ri.runner.RegidFilename), 0755)
+	os.MkdirAll(filepath.Dir(ri.runner.RegidFilename), 0755)
 	err = ioutil.WriteFile(ri.runner.RegidFilename, []byte(value), 0400)
 	if err != nil {
 		log.Log.Fatal("Could not write core.id.regid: ", err)

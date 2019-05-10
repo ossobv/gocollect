@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/ossobv/gocollect/gocollect-client/data"
 	"github.com/ossobv/gocollect/gocollect-client/log"
@@ -53,7 +53,7 @@ func fileToCollector(fileinfo os.FileInfo, readpath string) *data.Collector {
 		// Our runner
 		Run: runShellCollector,
 		// Set full path
-		RunArgs: path.Join(readpath, fileinfo.Name()),
+		RunArgs: filepath.Join(readpath, fileinfo.Name()),
 		// If the file is not executable, disable it
 		IsEnabled: isExecutable(fileinfo),
 	}

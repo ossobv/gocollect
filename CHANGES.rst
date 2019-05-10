@@ -1,6 +1,12 @@
 Changes
 -------
 
+* v0.7.2 [2019-05-10]:
+
+  - core.id: Fix blank ip4 in core.id on platforms with sed 4.4+.
+  - core.meta: Check for core.meta yaml files in path relative to the config
+    file location: /etc/gocollect.conf -> /etc + ./gocollect/core.meta/
+
 * v0.7.1 [2019-04-11]:
 
   - os.keys: Fix broken json when comments contained double quotes.

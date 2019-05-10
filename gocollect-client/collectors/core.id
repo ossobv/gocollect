@@ -31,7 +31,7 @@ fqdn=$(hostname -f 2>/dev/null || hostname)
 # ip4: The default IP4 source IP.
 ip4=$(ip route get 255.255.255.255 | sed -e '
       / dev /!d
-      s/.*src[[:blank:]]*\([^[:blank:]]*\)[:blank:]*/\1/
+      s/.*src[[:blank:]]*\([^[:blank:]]*\)[[:blank:]]*/\1/
       s/ *//g' | tr -d '[:cntrl:]"\\\\')
 
 # check/update fqdn

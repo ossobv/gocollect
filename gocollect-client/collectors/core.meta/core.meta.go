@@ -4,7 +4,7 @@ package builtincollector
 import (
 	"encoding/json"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 	"strings"
 
 	// Using "gopkg.in/yaml.v2" yields us:
@@ -15,11 +15,13 @@ import (
 
 	"github.com/ossobv/gocollect/gocollect-client/data"
 	"github.com/ossobv/gocollect/gocollect-client/log"
+	"github.com/ossobv/gocollect/gocollect-client/runnerinst"
+	"github.com/ossobv/gocollect/gocollect-client/sanejoin"
 )
 
 // Hardcoded paths for now.
 const coreMetaJsPath = "/var/lib/gocollect/core.meta.js"
-const coreMetaStarYamlPath = "/etc/gocollect/core.meta"
+const coreMetaStarYamlPath = "./gocollect/core.meta" // relative to conf
 
 func collect(key string, runargs string) data.Collected {
 	// If it exists, read JS file from /var/lib/gollect; old style.
@@ -45,8 +47,15 @@ func collectVarLibGocollectCoreMetaJs() (data.Collected, error) {
 }
 
 func collectEtcGocollectCoreMetaStarYaml() (data.Collected, error) {
+	// Get config path.
+	yamlPath := coreMetaStarYamlPath
+	runner := runnerinst.GetRunner()
+	if runner != nil {
+		yamlPath = sanejoin.Join((*runner).ConfigPathBase, yamlPath)
+	}
+
 	// If this fails here, ignore it silently.
-	yamlData, err := getYamlData(coreMetaStarYamlPath)
+	yamlData, err := getYamlData(yamlPath)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +97,7 @@ func getYamlData(filespath string) (map[string]([]byte), error) {
 			name := fileinfo.Name()
 			if !strings.HasPrefix(name, ".") &&
 				strings.HasSuffix(name, ".yaml") {
-				fullpath := path.Join(filespath, name)
+				fullpath := filepath.Join(filespath, name)
 				data, err := ioutil.ReadFile(fullpath)
 				if err != nil {
 					log.Log.Printf("collector[core.meta]: %s: %s", fullpath,

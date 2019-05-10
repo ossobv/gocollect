@@ -6,6 +6,7 @@ package runner
 // Runner holds everything we need for gocollect action. Set all fields
 // to a valid value before calling Run().
 type Runner struct {
+	ConfigPathBase   string
 	RegisterURL      string
 	PushURL          string
 	APIKey           string
