@@ -60,8 +60,8 @@ func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
 func getOptionDefinition() getopt.Options {
 	return getopt.Options{
 		// ..4...8......16......24......32......40......48......56......64
-		Description: ("GoCollect collects data through a series of scripts and " +
-			"publishes it to\na central server."),
+		Description: ("GoCollect collects data through a series of scripts " +
+			"and publishes it to\na central server."),
 		Definitions: getopt.Definitions{
 			{OptionDefinition: "config|c",
 				Description:  "config file",
@@ -180,8 +180,8 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		if _, ok := options["test-key"]; ok {
 			fmt.Fprintf(
 				os.Stderr,
-				("%s: Beware, not running the collector as root may yield " +
-					"incomplete data.\n"),
+				("%s: Beware, running the collector as non-superuser may " +
+					"yield incomplete data.\n"),
 				filepath.Base(os.Args[0]))
 			// don't exit
 		} else {
@@ -189,8 +189,8 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 				os.Stderr,
 				("%s: Running gocollect as non-privileged user may " +
 					"cause several\n" +
-					"collectors to return too little info. Pass --without-root " +
-					"to bypass this check.\n"),
+					"collectors to return too little info. Pass " +
+					"--without-root to bypass this check.\n"),
 				filepath.Base(os.Args[0]))
 			os.Exit(1)
 		}
