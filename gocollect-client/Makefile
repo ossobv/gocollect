@@ -142,7 +142,7 @@ testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
 	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
 
-check:
+check: pretty
 	for d in $(GODIRS); do (cd $$d && go test); done
 
 pretty:

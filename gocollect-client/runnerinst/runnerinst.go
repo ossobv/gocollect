@@ -6,7 +6,7 @@ import (
 
 // collectRunnerInstance can be used in rare circumstances when you need
 // access to one of the Runner properties.
-var runnerInstance *runner.Runner = nil
+var runnerInstance *runner.Runner
 
 // SetRunner is the ugly pattern to give access to the currently
 // executing runner.

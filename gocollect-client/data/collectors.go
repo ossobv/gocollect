@@ -28,7 +28,7 @@ type Collector struct {
 // the file name.
 type Collectors map[string]Collector
 
-// Global list of builtin collectors.
+// BuiltinCollectors holds a list of builtin collectors.
 var BuiltinCollectors = Collectors{}
 
 // MergeCollectors merges two lists of collectors and returns a new

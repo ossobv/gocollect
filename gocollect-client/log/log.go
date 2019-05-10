@@ -5,5 +5,5 @@ import (
 	golog "log"
 )
 
-// Assign a valid logger here.
+// Log references a valid logger here. The application should set this ASAP.
 var Log *golog.Logger
