@@ -10,7 +10,7 @@ import (
 	golog "log"
 	"log/syslog"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -52,7 +52,7 @@ func printVersionAndExit() {
 func printErrorAndExit(errstr string, optionDefinition getopt.Options) {
 	fmt.Fprintf(
 		os.Stderr, "%s: %s\n\n%s\nSee --help for more info.\n",
-		path.Base(os.Args[0]), errstr,
+		filepath.Base(os.Args[0]), errstr,
 		strings.TrimSpace(optionDefinition.Usage()))
 	os.Exit(1)
 }
@@ -121,7 +121,7 @@ func parseConfigOrExit(filename string) (config configMap) {
 	if e != nil {
 		fmt.Fprintf(
 			os.Stderr, "%s: %s\n\nSee --help for more info.\n",
-			path.Base(os.Args[0]), e.Error())
+			filepath.Base(os.Args[0]), e.Error())
 		os.Exit(1)
 	}
 
@@ -136,7 +136,7 @@ func parseConfigWithIncludes(config *configMap, filename string,
 	if depth >= 10 {
 		fmt.Fprintf(
 			os.Stderr, "%s: Ridiculous include depth in %s config file!\n",
-			path.Base(os.Args[0]), filename)
+			filepath.Base(os.Args[0]), filename)
 		os.Exit(1)
 	}
 
@@ -182,7 +182,7 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 				os.Stderr,
 				("%s: Beware, not running the collector as root may yield " +
 					"incomplete data.\n"),
-				path.Base(os.Args[0]))
+				filepath.Base(os.Args[0]))
 			// don't exit
 		} else {
 			fmt.Fprintf(
@@ -191,7 +191,7 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 					"cause several\n" +
 					"collectors to return too little info. Pass --without-root " +
 					"to bypass this check.\n"),
-				path.Base(os.Args[0]))
+				filepath.Base(os.Args[0]))
 			os.Exit(1)
 		}
 	}
@@ -201,7 +201,7 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		fmt.Fprintf(
 			os.Stderr,
 			"%s: --test-key only works together with --one-shot.\n",
-			path.Base(os.Args[0]))
+			filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 }

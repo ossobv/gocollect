@@ -4,7 +4,7 @@ package builtincollector
 import (
 	"encoding/json"
 	"io/ioutil"
-	"path"
+	"path/filepath"
 	"strings"
 
 	// Using "gopkg.in/yaml.v2" yields us:
@@ -88,7 +88,7 @@ func getYamlData(filespath string) (map[string]([]byte), error) {
 			name := fileinfo.Name()
 			if !strings.HasPrefix(name, ".") &&
 				strings.HasSuffix(name, ".yaml") {
-				fullpath := path.Join(filespath, name)
+				fullpath := filepath.Join(filespath, name)
 				data, err := ioutil.ReadFile(fullpath)
 				if err != nil {
 					log.Log.Printf("collector[core.meta]: %s: %s", fullpath,
