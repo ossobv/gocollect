@@ -16,6 +16,7 @@ import (
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 	"github.com/ossobv/gocollect/gocollect-client/runner"
+	"github.com/ossobv/gocollect/gocollect-client/runnerinst"
 
 	// Import builtin collectors.
 	_ "github.com/ossobv/gocollect/gocollect-client/collectors"
@@ -126,6 +127,7 @@ func parseConfigOrExit(filename string) (config configMap) {
 	}
 
 	config = configMap{}
+	config["config_path"] = []string{filepath.Dir(filename)}
 	parseConfigWithIncludes(&config, filename, data, 0)
 	// debugPrintConfig(config)
 	return config
@@ -220,6 +222,7 @@ func createCollectRunner(
 	if urls, ok := config["push_url"]; ok {
 		ret.PushURL = urls[len(urls)-1] // must have len>=1
 	}
+	ret.ConfigPathBase = config["config_path"][0]
 	ret.CollectorsPaths = config["collectors_path"]
 	ret.RegidFilename = defaultRegidFilename
 	ret.GoCollectVersion = versionStr
@@ -257,6 +260,8 @@ func main() {
 	checkOptionsOrExit(options)
 	// Extract arguments, creating a CollectRunner.
 	collectRunner := createCollectRunner(options, config)
+	runnerinst.SetRunner(&collectRunner)
+	defer runnerinst.SetRunner(nil)
 	// Create and set global logger.
 	log.Log = setupLogger(oneShot)
 
