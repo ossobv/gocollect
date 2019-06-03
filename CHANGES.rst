@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.7.3 [2019-06-03]:
+
+  - core.id: Fix incorrect ip4 in core.id newer platforms.
+
 * v0.7.2 [2019-05-10]:
 
   - core.id: Fix blank ip4 in core.id on platforms with sed 4.4+.
