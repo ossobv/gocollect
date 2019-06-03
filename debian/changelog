@@ -1,3 +1,9 @@
+gocollect (0.7.3-1) stable; urgency=medium
+
+  * Create v0.7.3-1 release. See CHANGES.rst for the changes.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Mon, 03 Jun 2019 18:01:00 +0200
+
 gocollect (0.7.2-1) stable; urgency=medium
 
   * Create v0.7.2-1 release. See CHANGES.rst for the changes.
