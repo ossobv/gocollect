@@ -69,4 +69,31 @@ while read file; do
         s#\\##g;s#"##g
         s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escfile'","comment":"\3"},/'
 done | sed -e '$s/,$//'
+echo ']'
+
+echo ',"apt":['
+algo=; created=; expires=; key=; uid=; idx=0
+apt-key adv --list-keys 2>/dev/null | sed -re '
+    1,/^--------/d
+    s/^pub[[:blank:]]+([^[:blank:]]*)[[:blank:]]([0-9-]*) (.*expires: ([0-9-]*))?.*/algo=\1|created=\2|expires=\4/
+    s/^[[:blank:]]+(.*)/key=\1/
+    s/^uid[[:blank:]].*[]] */uid=/
+    s/"//g' | tr '|' '\n' |
+while read line; do
+    k=${line%%=*}; v=${line#*=}
+    case "$k" in
+    algo) algo=$v;;
+    created) created=$v;;
+    expires) expires=$v;;
+    key) key=$v;;
+    uid)
+        uid=$v
+        test $idx -gt 0 && echo -n ,
+        echo "{\"algo\":\"$algo\",\"created\":\"$created\",\"expires\":\"$expires\",\"key\":\"$key\",\"uid\":\"$uid\"}"
+        idx=$((idx+1))
+        algo=; created=; expires=; key=; uid=
+        ;;
+    *) algo=; created=; expires=; key=; uid=;;
+    esac
+done
 echo ']}'
