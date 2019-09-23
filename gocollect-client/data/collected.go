@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 )
@@ -55,6 +56,9 @@ func NewCollected(data []byte) (Collected, error) {
 	compacted.WriteByte('\n')
 
 	tmp := collected{data: compacted.String()}
+	if !utf8.ValidString(tmp.data) {
+		return nil, errors.New("invalid json/utf-8")
+	}
 	return &tmp, nil
 }
 
