@@ -73,7 +73,7 @@ echo ']'
 
 echo ',"apt":['
 algo=; created=; expires=; key=; uid=; idx=0
-apt-key adv --list-keys 2>/dev/null | sed -re '
+LC_ALL=en_US.UTF-8 apt-key adv --list-keys 2>/dev/null | sed -re '
     1,/^--------/d
     s/^pub[[:blank:]]+([^[:blank:]]*)[[:blank:]]([0-9-]*) (.*expires: ([0-9-]*))?.*/algo=\1|created=\2|expires=\4/
     s/^[[:blank:]]+(.*)/key=\1/
