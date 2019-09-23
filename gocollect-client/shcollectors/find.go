@@ -93,24 +93,28 @@ func runShellCollector(key string, execpath string) data.Collected {
 		stdout, e = cmd.Output()
 	}
 
-	// If the process returned non-zero, then err is non-nil.  However,
+	// If the process returned non-zero, then err is non-nil. However,
 	// if we're using filters in the command, then we will probably get
-	// a zero exit anyway.  We'll have to check for valid JS below
-	// instead.
-	if e != nil {
-		// Probably '!cmd.ProcessState.Success()'.
-		log.Log.Printf(
-			"collector[%s]: %s error: %s", key, execpath, e.Error())
-		return nil
-	}
+	// a zero exit anyway. We'll have to check for valid JS too.
+	if e == nil {
+		// Really really valid?
+		ret, e := data.NewCollected(stdout)
+		if e == nil {
+			return ret
+		}
 
-	ret, e := data.NewCollected(stdout)
-	if e != nil {
+		// I guess not.
 		log.Log.Printf(
 			"collector[%s]: decode error: %s", key, e.Error())
 		log.Log.Printf("collector[%s]: data: %s", key, stdout)
+	} else {
+		// Probably '!cmd.ProcessState.Success()'.
+		log.Log.Printf(
+			"collector[%s]: %s error: %s", key, execpath, e.Error())
 	}
 
+	// Tell the server that something is wrong here.
+	ret, _ := data.NewCollected([]byte("{\"error\":\"EINVAL\"}\n"))
 	return ret
 }
 
