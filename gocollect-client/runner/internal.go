@@ -75,7 +75,7 @@ func (ri *runInfo) runRegister() bool {
 func (ri *runInfo) runAll() {
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
-	for _, collectorKey := range ri.collectors.Runnable() {
+	for _, collectorKey := range ri.collectors.GetRunnable() {
 		// Run a (patched) collector.
 		collected := ri.runCollector(collectorKey)
 		if collected == nil {
@@ -89,7 +89,10 @@ func (ri *runInfo) runAll() {
 		extraContext["_collector"] = collectorKey
 		pushURL := ri.coreIDData.BuildString(ri.runner.PushURL, &extraContext)
 
-		ri.push(pushURL, collected)
+		if !ri.push(pushURL, collected) {
+			log.Log.Printf("push: aborting early; assuming server is broken")
+			break
+		}
 	}
 }
 

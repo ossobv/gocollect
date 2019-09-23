@@ -1,6 +1,15 @@
 Changes
 -------
 
+* v0.7.4 [2019-09-23]:
+
+  - push: Stop pushing if one endpoint fails. Mitigates cases when the
+    endpoint has trouble, and we don't want to flood it more than we
+    already do.
+  - os.keys: Read ``sshd_config`` for local ``authorized_keys`` paths.
+  - os.keys: Added "apt" key to data export, with a listing of public
+    pgp keys allowed by apt.
+
 * v0.7.3 [2019-06-03]:
 
   - core.id: Fix incorrect ip4 in core.id newer platforms.

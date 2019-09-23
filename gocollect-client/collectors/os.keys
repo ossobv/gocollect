@@ -4,6 +4,30 @@
 # REQUIRES: sed(sed)
 # SUGGESTS: openssh-client(ssh-keygen)
 
+list_key_locations() {
+    args=$(sed -ne \
+        '/^AuthorizedKeysFile[[:blank:]]/{s/^[^[:blank:]]*[[:blank:]]*//p}' \
+        /etc/ssh/sshd_config | tail -n1)
+    test -z "$args" && args=".ssh/authorized_keys .ssh/authorized_keys2"
+    echo "$args" | sed -e 's/[[:blank:]]\+/ /g;s/^ //;s/ $//' | tr ' ' '\n' |
+    sed -e 's#^\([^/%]\)#%h/\1#'
+}
+
+key_locations="$(list_key_locations)"
+
+list_user_key_locations() {
+    while read user_homedir; do
+        user=${user_homedir%%:*}
+        homedir=${user_homedir#*:}
+        user=${user%%#*}
+        homedir=${homedir%%#*}
+        echo "$key_locations" | while read location; do
+            echo "$location" | sed -e "
+                s#%h#$homedir#g;s#%u#$user#g;s#%%#%#g"
+        done
+    done
+}
+
 list_keys() {
     # If ssh-keygen is new enough to support sha512, then it's new
     # enough to support multiple ssh key output (I think).
@@ -33,12 +57,8 @@ list_keys() {
 }
 
 echo '{"ssh":['
-(
-    # Guess authorized_keys in <homedir>/.ssh
-    cut -d: -f6 /etc/passwd | LC_ALL=C sort -u | sed -e 's#$#/.ssh/authorized_keys#'
-    # Find authorized_keys files in /etc/ssh for ecryptfs systems.
-    find /etc/ssh -name authorized_keys
-) | LC_ALL=C sort -u | while read file; do
+cut -f1,6 -d: /etc/passwd | list_user_key_locations | LC_ALL=C sort -u |
+while read file; do
     # Readable non-empty file? If not, move to next.
     test -s "$file" || continue
 
@@ -49,4 +69,31 @@ echo '{"ssh":['
         s#\\##g;s#"##g
         s/\([0-9]*\) \+\([^ ]*\) \+\(.*\)/{"bits":\1,"hash":"\2","path":"'$escfile'","comment":"\3"},/'
 done | sed -e '$s/,$//'
+echo ']'
+
+echo ',"apt":['
+algo=; created=; expires=; key=; uid=; idx=0
+apt-key adv --list-keys 2>/dev/null | sed -re '
+    1,/^--------/d
+    s/^pub[[:blank:]]+([^[:blank:]]*)[[:blank:]]([0-9-]*) (.*expires: ([0-9-]*))?.*/algo=\1|created=\2|expires=\4/
+    s/^[[:blank:]]+(.*)/key=\1/
+    s/^uid[[:blank:]].*[]] */uid=/
+    s/"//g' | tr '|' '\n' |
+while read line; do
+    k=${line%%=*}; v=${line#*=}
+    case "$k" in
+    algo) algo=$v;;
+    created) created=$v;;
+    expires) expires=$v;;
+    key) key=$v;;
+    uid)
+        uid=$v
+        test $idx -gt 0 && echo -n ,
+        echo "{\"algo\":\"$algo\",\"created\":\"$created\",\"expires\":\"$expires\",\"key\":\"$key\",\"uid\":\"$uid\"}"
+        idx=$((idx+1))
+        algo=; created=; expires=; key=; uid=
+        ;;
+    *) algo=; created=; expires=; key=; uid=;;
+    esac
+done
 echo ']}'

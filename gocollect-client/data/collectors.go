@@ -4,6 +4,7 @@ package data
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 )
@@ -61,13 +62,68 @@ func (c *Collectors) Run(key string) Collected {
 	return EmptyCollected()
 }
 
-// Runnable returns all keys that have a runnable/enabled collector.
-func (c *Collectors) Runnable() (keys []string) {
+// GetRunnable returns all keys that have a runnable/enabled collector
+// in a stable/sorted order. That is, sorted order, but core.id is first.
+func (c *Collectors) GetRunnable() (keys []string) {
 	for key, collector := range *c {
 		if collector.IsEnabled {
 			keys = append(keys, key)
 		}
 	}
-	sort.Strings(keys)
+	sort.Sort(byKeyName(keys))
 	return keys
+}
+
+// Sorting functions below: sort core.* before sys.*, etc..
+// This way we'll get "core.id" first. This should always be accepted.
+// So if it isn't, we can abort the entire run.
+
+var catOrder = []string{"core", "sys", "os"}
+
+type byKeyName []string
+
+func (s byKeyName) Len() int {
+	return len(s)
+}
+
+func (s byKeyName) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s byKeyName) Less(i, j int) bool {
+	ipos := strings.IndexByte(s[i], '.')
+	jpos := strings.IndexByte(s[j], '.')
+
+	// Common case: they have a category "core." or "os."
+	if ipos != -1 && jpos != -1 {
+		icat := s[i][0:ipos]
+		jcat := s[j][0:jpos]
+		if icat == jcat {
+			return s[i] < s[j]
+		}
+		var icatpos, jcatpos int
+		for icatpos = 0; icatpos < len(catOrder); icatpos++ {
+			if icat == catOrder[icatpos] {
+				break
+			}
+		}
+		for jcatpos = 0; jcatpos < len(catOrder); jcatpos++ {
+			if jcat == catOrder[jcatpos] {
+				break
+			}
+		}
+		if icatpos == jcatpos {
+			return s[i] < s[j]
+		}
+		return icatpos < jcatpos
+	}
+
+	// Unexpected cases when one or both don't have a category
+	if ipos == -1 && jpos == -1 {
+		return s[i] < s[j]
+	}
+	if ipos == -1 {
+		return false // lhs has no category; so it's later
+	}
+	return true // rhs has no category; so lhs is less
 }

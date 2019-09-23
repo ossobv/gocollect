@@ -9,8 +9,8 @@ import (
 func ExampleFind() {
 	collectors := Find([]string{"../collectors"})
 
-	// collectors.Runnable() has all keys of runnable collectors.
-	runnableCount := len(collectors.Runnable())
+	// collectors.GetRunnable() has all keys of runnable collectors.
+	runnableCount := len(collectors.GetRunnable())
 	if runnableCount < 5 {
 		fmt.Println("strange, very few runners?")
 	}
