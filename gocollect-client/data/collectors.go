@@ -78,7 +78,7 @@ func (c *Collectors) GetRunnable() (keys []string) {
 // This way we'll get "core.id" first. This should always be accepted.
 // So if it isn't, we can abort the entire run.
 
-var catOrder []string = []string{"core", "sys", "os"}
+var catOrder = []string{"core", "sys", "os"}
 
 type byKeyName []string
 

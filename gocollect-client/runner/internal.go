@@ -89,7 +89,10 @@ func (ri *runInfo) runAll() {
 		extraContext["_collector"] = collectorKey
 		pushURL := ri.coreIDData.BuildString(ri.runner.PushURL, &extraContext)
 
-		ri.push(pushURL, collected)
+		if !ri.push(pushURL, collected) {
+			log.Log.Printf("push: aborting early; assuming server is broken")
+			break
+		}
 	}
 }
 
