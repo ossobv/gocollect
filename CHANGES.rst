@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.7.5 [2019-09-23]:
+
+  - push: Check for invalid UTF-8 and report broken JSON to server.
+
 * v0.7.4 [2019-09-23]:
 
   - push: Stop pushing if one endpoint fails. Mitigates cases when the
