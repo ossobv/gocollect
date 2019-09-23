@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.7.6 [2019-09-23]:
+
+  - os.keys: Fixes to apt-key --list-keys listing so it works with gpg 1.4
+    (and not only gpg 2.2).
+
 * v0.7.5 [2019-09-23]:
 
   - push: Check for invalid UTF-8 and report broken JSON to server.
