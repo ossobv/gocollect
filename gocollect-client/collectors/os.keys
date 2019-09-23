@@ -72,12 +72,12 @@ done | sed -e '$s/,$//'
 echo ']'
 
 echo ',"apt":['
-algo=; created=; expires=; key=; uid=; idx=0
-LC_ALL=en_US.UTF-8 apt-key adv --list-keys 2>/dev/null | sed -re '
+algo=; created=; expires=; key=; uid=
+LC_ALL=en_US.UTF-8 apt-key adv --list-keys --fingerprint 2>/dev/null | sed -re '
     1,/^--------/d
-    s/^pub[[:blank:]]+([^[:blank:]]*)[[:blank:]]([0-9-]*) (.*expires: ([0-9-]*))?.*/algo=\1|created=\2|expires=\4/
-    s/^[[:blank:]]+(.*)/key=\1/
-    s/^uid[[:blank:]].*[]] */uid=/
+    s/^pub[[:blank:]]+([^[:blank:]\/]*)(\/[0-9A-F]+)?[[:blank:]]([0-9-]*)(.*expires: ([0-9-]*))?.*/algo=\1|created=\3|expires=\5/
+    /^[[:blank:]]+(.*)/{s/Key fingerprint = //;s/ //g;s/^/key=/}
+    s/^uid[[:blank:]].*[]] */uid=/;s/^uid[[:blank:]]+/uid=/
     s/"//g' | tr '|' '\n' |
 while read line; do
     k=${line%%=*}; v=${line#*=}
@@ -88,12 +88,10 @@ while read line; do
     key) key=$v;;
     uid)
         uid=$v
-        test $idx -gt 0 && echo -n ,
-        echo "{\"algo\":\"$algo\",\"created\":\"$created\",\"expires\":\"$expires\",\"key\":\"$key\",\"uid\":\"$uid\"}"
-        idx=$((idx+1))
+        echo ",{\"key\":\"$key\",\"algo\":\"$algo\",\"created\":\"$created\",\"expires\":\"$expires\",\"uid\":\"$uid\"}"
         algo=; created=; expires=; key=; uid=
         ;;
     *) algo=; created=; expires=; key=; uid=;;
     esac
-done
+done | LC_ALL=C sort | sed -e '1s/^,//'
 echo ']}'
