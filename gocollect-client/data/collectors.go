@@ -61,13 +61,19 @@ func (c *Collectors) Run(key string) Collected {
 	return EmptyCollected()
 }
 
-// Runnable returns all keys that have a runnable/enabled collector.
-func (c *Collectors) Runnable() (keys []string) {
+// GetRunnable returns all keys that have a runnable/enabled collector
+// in a stable/sorted order. That is, sorted order, but core.id is first.
+func (c *Collectors) GetRunnable() (keys []string) {
+	keys = append(keys, "")  // make room for "core.id"
 	for key, collector := range *c {
-		if collector.IsEnabled {
+		if collector.IsEnabled && key != "core.id" {
 			keys = append(keys, key)
 		}
 	}
 	sort.Strings(keys)
+	if keys[0] != "" {
+		panic("sort broken?");
+	}
+	keys[0] = "core.id"
 	return keys
 }
