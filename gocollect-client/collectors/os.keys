@@ -4,6 +4,30 @@
 # REQUIRES: sed(sed)
 # SUGGESTS: openssh-client(ssh-keygen)
 
+list_key_locations() {
+    args=$(sed -ne \
+        '/^AuthorizedKeysFile[[:blank:]]/{s/^[^[:blank:]]*[[:blank:]]*//p}' \
+        /etc/ssh/sshd_config | tail -n1)
+    test -z "$args" && args=".ssh/authorized_keys .ssh/authorized_keys2"
+    echo "$args" | sed -e 's/[[:blank:]]\+/ /g;s/^ //;s/ $//' | tr ' ' '\n' |
+    sed -e 's#^\([^/%]\)#%h/\1#'
+}
+
+key_locations="$(list_key_locations)"
+
+list_user_key_locations() {
+    while read user_homedir; do
+        user=${user_homedir%%:*}
+        homedir=${user_homedir#*:}
+        user=${user%%#*}
+        homedir=${homedir%%#*}
+        echo "$key_locations" | while read location; do
+            echo "$location" | sed -e "
+                s#%h#$homedir#g;s#%u#$user#g;s#%%#%#g"
+        done
+    done
+}
+
 list_keys() {
     # If ssh-keygen is new enough to support sha512, then it's new
     # enough to support multiple ssh key output (I think).
@@ -33,12 +57,8 @@ list_keys() {
 }
 
 echo '{"ssh":['
-(
-    # Guess authorized_keys in <homedir>/.ssh
-    cut -d: -f6 /etc/passwd | LC_ALL=C sort -u | sed -e 's#$#/.ssh/authorized_keys#'
-    # Find authorized_keys files in /etc/ssh for ecryptfs systems.
-    find /etc/ssh -name authorized_keys
-) | LC_ALL=C sort -u | while read file; do
+cut -f1,6 -d: /etc/passwd | list_user_key_locations | LC_ALL=C sort -u |
+while read file; do
     # Readable non-empty file? If not, move to next.
     test -s "$file" || continue
 
