@@ -75,7 +75,7 @@ echo ',"apt":['
 algo=; created=; expires=; key=; uid=
 LC_ALL=en_US.UTF-8 apt-key adv --list-keys --fingerprint 2>/dev/null | sed -re '
     1,/^--------/d
-    s/^pub[[:blank:]]+([^[:blank:]\/]*)(\/[0-9A-F]+)?[[:blank:]]([0-9-]*)(.*expires: ([0-9-]*))?.*/algo=\1|created=\3|expires=\5/
+    s/^pub[[:blank:]]+([^[:blank:]\/]*)(\/[0-9A-F]+)?[[:blank:]]([0-9-]*)(.*expire[ds]: ([0-9-]*))?.*/algo=\1|created=\3|expires=\5/
     /^[[:blank:]]+(.*)/{s/Key fingerprint = //;s/ //g;s/^/key=/}
     s/^uid[[:blank:]].*[]] */uid=/;s/^uid[[:blank:]]+/uid=/
     s/"//g' | tr '|' '\n' |
