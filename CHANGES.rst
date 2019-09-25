@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.7.7 [2019-09-25]:
+
+  - os.keys: Fixes to apt-key --list-keys so expired keys also get expires
+    values.
+
 * v0.7.6 [2019-09-23]:
 
   - os.keys: Fixes to apt-key --list-keys listing so it works with gpg 1.4
