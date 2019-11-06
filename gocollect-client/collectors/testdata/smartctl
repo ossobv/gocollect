@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+import sys
+from random import choice
+
+smartctl_output = [
+    # 2019-11/debian/buster/pve1-wp
+    # smartctl -T verypermissive -i /dev/nvme0 -d nvme
+    '''\
+smartctl 7.0 2018-12-30 r4883 [x86_64-linux-4.15-generic] (local build)
+Copyright (C) 2002-18, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Number:                       INTEL SSDPxxxxxxxXX
+Serial Number:                      BTxxxxxxxxxxxxxxGN
+Firmware Version:                   VDxxxx31
+PCI Vendor/Subsystem ID:            0x8086
+IEEE OUI Identifier:                0x5xxxx4
+Total NVM Capacity:                 4,000,787,030,016 [4.00 TB]
+Unallocated NVM Capacity:           0
+Controller ID:                      0
+Number of Namespaces:               1
+Namespace 1 Size/Capacity:          4,000,787,030,016 [4.00 TB]
+Namespace 1 Formatted LBA Size:     4096
+Namespace 1 IEEE EUI-64:            5xxxx4 3dxxxxxx00
+Local Time is:                      Wed Nov  6 08:53:56 2019 CET
+''',
+]
+
+if sys.argv[1:] == ['--scan']:
+    print('''\
+/dev/nvme0 -d nvme # /dev/nvme0, NVMe device''')
+else:
+    print(choice(smartctl_output))
