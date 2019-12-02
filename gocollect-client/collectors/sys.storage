@@ -53,8 +53,12 @@ echo "$devices" | while read line; do
         name=`echo "$smartctl" |
               sed -e '/^Vendor\|^Product\|Model/!d;s/^[^:]*:[[:blank:]]*//;s/"//g' |
               tr '\n' ' ' | sed -e 's/[[:blank:]][[:blank:]]*/ /g;s/^ *//;s/ *$//'`
-        bytes=`echo "$smartctl" |
-               sed -e '/Capacity/!d;s/^[^:]*:[[:blank:]]*//;s/ bytes.*//;s/,//g;s/"//g'`
+        bytes=$(echo "$smartctl" | sed -e '
+                /Capacity/!d
+                s/^[^:]*:[[:blank:]]*//
+                s/ bytes.*//;s/ [[].*//
+                s/,//g;s/"//g' |
+                head -n1)
         serial=`echo "$smartctl" |
                 sed -e '/^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g'`
         printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \

@@ -1,0 +1,8 @@
+#!/bin/sh
+# lsblk -no TYPE,NAME
+cat <<EOF
+disk zd0
+disk nvme0n1
+part ├─nvme0n1p1
+part └─nvme0n1p9
+EOF
