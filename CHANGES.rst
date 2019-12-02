@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.7.8 [2019-12-02]:
+
+  - sys.storage: Fix smartctl multiline output causing trouble.
+
 * v0.7.7 [2019-09-25]:
 
   - os.keys: Fixes to apt-key --list-keys so expired keys also get expires
