@@ -1,0 +1,6 @@
+# Restart at most once every 5s. Otherwise systemd might stop it for
+# restarting too often. This can happen during apt-daily-upgrade.
+# (Yes. The stat on the proc-dir is not 100% accurate, but a lot easier
+# than collecting the start time in "clock ticks since boot" from
+# proc-stat[20].)
+DPkg::Post-Invoke {"service gocollect status >/dev/null && test $(date '+%s' -d '-5 seconds') -gt $(stat -c%Y /proc/$(pgrep -xuroot gocollect | head -n1)) && if ! service gocollect restart; then echo '(suppressing gocollect restart failure)' >&2; fi; true"; };

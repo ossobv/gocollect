@@ -1,3 +1,11 @@
+gocollect (0.7.8-FIXME) stable; urgency=medium
+
+  * Alter 99gocollect-restart post apt/dpkg hook, to not restart if the latest
+    restart was less than 5 seconds ago. This should fix blacklisting/stopping
+    by systemd. (Which can happen during nightly auto-updates.)
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Mon, 27 Jan 2020 10:46:57 +0100
+
 gocollect (0.7.8-1) stable; urgency=medium
 
   * Create v0.7.8-1 release. See CHANGES.rst for the changes.

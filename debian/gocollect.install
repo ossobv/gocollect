@@ -1,0 +1,1 @@
+debian/etc-extra/99gocollect-restart etc/apt/apt.conf.d/
