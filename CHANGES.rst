@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.8.0 [2020-03-27]:
+
+  - main: Add so USR1 restarts. This should resolve systemd gocollect is
+    restarting too fast issues when doing unattended upgrades.
+
 * v0.7.8 [2019-12-02]:
 
   - sys.storage: Fix smartctl multiline output causing trouble.
