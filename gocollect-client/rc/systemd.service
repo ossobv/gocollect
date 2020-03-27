@@ -4,6 +4,7 @@ Description=GoCollect, the rarely changing sysinfo collector
 
 [Service]
 ExecStart=/usr/sbin/gocollect
+ExecReload=/bin/kill -USR1 $MAINPID
 
 [Install]
 WantedBy=multi-user.target

@@ -75,7 +75,7 @@ do_stop()
 }
 
 #
-# Function that sends a SIGHUP to the daemon/service
+# Function that sends a SIGUSR1 to the daemon/service
 #
 do_reload() {
 	#
@@ -83,7 +83,7 @@ do_reload() {
 	# restarting (for example, when it is sent a SIGHUP),
 	# then implement that here.
 	#
-	start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE \
+	start-stop-daemon --stop --signal 10 --quiet --pidfile $PIDFILE \
 		--name $NAME
 	return 0
 }
@@ -108,6 +108,10 @@ case "$1" in
   status)
 	status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
 	;;
+  reload)
+	log_daemon_msg "Reloading $DESC" "$NAME"
+	do_reload
+	;;
   restart|force-reload)
 	log_daemon_msg "Restarting $DESC" "$NAME"
 	do_stop
@@ -127,7 +131,7 @@ case "$1" in
 	esac
 	;;
   *)
-	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|status|reload|restart|force-reload}" >&2
 	exit 3
 	;;
 esac
