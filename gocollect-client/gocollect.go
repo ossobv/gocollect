@@ -12,11 +12,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 	"github.com/ossobv/gocollect/gocollect-client/runner"
 	"github.com/ossobv/gocollect/gocollect-client/runnerinst"
+	"github.com/ossobv/gocollect/gocollect-client/signal"
 
 	// Import builtin collectors.
 	_ "github.com/ossobv/gocollect/gocollect-client/collectors"
@@ -264,6 +264,8 @@ func main() {
 	defer runnerinst.SetRunner(nil)
 	// Create and set global logger.
 	log.Log = setupLogger(oneShot)
+	// Use signals to sleep in the main thread.
+	sigHandler := signal.NewAlarmHupUsr1()
 
 	// Do the work.
 	os.Chdir("/")
@@ -284,11 +286,16 @@ func main() {
 		ret := collectRunner.Run()
 		if oneShot {
 			if !ret {
-				golog.Fatal("CollectRunner.Run() returned false")
+				log.Log.Fatal("CollectRunner.Run() returned false")
 			}
 			return
 		}
 
-		time.Sleep(4 * 3600 * time.Second)
+		signal.Alarm(4 * 3600)
+		sig := <-sigHandler.Chan // wait for SIGALRM or SIGHUP or SIGUSR1
+		if sig.String() != "alarm clock" {
+			signal.Alarm(0)
+			log.Log.Printf("Got %s to wake up early", sig.String())
+		}
 	}
 }
