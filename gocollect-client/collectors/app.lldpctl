@@ -1,0 +1,24 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: hardware-only, optional
+# REQUIRES: lldpctl(lldpd)
+# REQUIRES: sed(sed)
+
+# json0 is "easier to parse" than json, but has arrays instead of dicts. This
+# means that it might change sort order. We'll go with dicts which we can sort.
+default_output=$(lldpctl -f json 2>/dev/null)
+ret=$?
+
+if test $ret -eq 127; then
+    # No such process. Ignore.
+    exit 0
+fi
+
+if test $ret -ne 0 || test -z "$default_output"; then
+    echo "ERROR: lldpctl returned $ret; $default_output" >&2
+    exit 1
+fi
+
+echo "{\"lldpctl.default\": "
+echo "$default_output" | sed -e 's/"age": *"[^"]*" *,\?//g' # drop changing age
+echo "}"
