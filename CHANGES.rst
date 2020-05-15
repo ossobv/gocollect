@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.8.1 [2020-05-15]:
+
+  - app.lldpctl: Add lldpctl monitoring.
+  - app.lshw: Fix against extra surrounding [].
+
 * v0.8.0 [2020-03-27]:
 
   - main: Add so USR1 restarts. This should resolve systemd gocollect is

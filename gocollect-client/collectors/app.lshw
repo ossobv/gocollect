@@ -9,7 +9,15 @@
 # The sed-command replaces the "size" parameter in the "cpu" dictionary
 # with -1 because it fluctuates on certain CPUs.
 #
+# lshw (02.18.85-0.3) since Ubuntu 19.10 writes a list with a dict
+# inside, instead of a dict. So we'll remove 1s/^[[] and s/^[]]$.
+# Reports are here:
+# - https://ezix.org/src/pkg/lshw/pulls/28
+# - https://github.com/lyonel/lshw/pull/28#issuecomment-617754022
+#
 ( lshw -json </dev/null 2>/dev/null || echo '{}' ) | sed -e '
+    1s/^[[]//
+    s/^[]]$//
     /"id"[[:blank:]:]*"cpu",/,/"size"[[:blank:]:]*[0-9]\+/{
       s/"size"[[:blank:]:]*[0-9]\+/"size": -1/g}'
 

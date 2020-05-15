@@ -1,0 +1,33 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: hardware-only, optional
+# REQUIRES: lldpctl(lldpd)
+# REQUIRES: sed(sed)
+
+# Using json0 because it is "easier to parse" than json. Both have arrays,
+# using json-format does not improve sorting, as the interfaces were in a list
+# anyway. In json0-format values (e.g. interface names) are not used as keys.
+
+# Example jq:
+
+#   jq < app.lldpctl '
+#     .["lldpctl.default"].lldp[0].interface |
+#     map({"name": .name, "chassis": .chassis[0].name[0].value,
+#          "port": .port[0].id[0].value})'
+#
+default_output=$(lldpctl -f json0 2>/dev/null)
+ret=$?
+
+if test $ret -eq 127; then
+    # No such process. Ignore.
+    exit 0
+fi
+
+if test $ret -ne 0 || test -z "$default_output"; then
+    echo "ERROR: lldpctl returned $ret; $default_output" >&2
+    exit 1
+fi
+
+echo "{\"lldpctl.default\": "
+echo "$default_output" | sed -e 's/"age": *"[^"]*" *,\?//g' # drop changing age
+echo "}"
