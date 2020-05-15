@@ -1,3 +1,9 @@
+gocollect (0.8.1-1) stable; urgency=medium
+
+  * Create v0.8.1-1 release. See CHANGES.rst for the changes.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Fri, 15 May 2020 12:27:00 +0200
+
 gocollect (0.8.0-1) stable; urgency=medium
 
   * Alter 99gocollect-restart post apt/dpkg hook, to use USR1 to restart.
