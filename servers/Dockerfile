@@ -12,6 +12,7 @@ WORKDIR /app
 
 ENV PYTHONPATH /app
 COPY ["lib", "/app/lib"]
+COPY ["rmq2es", "/app/rmq2es"]
 COPY ["rmq2file", "/app/rmq2file"]
 COPY ["wsgi2file", "/app/wsgi2file"]
 

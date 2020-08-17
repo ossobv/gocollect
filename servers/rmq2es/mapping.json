@@ -1,0 +1,102 @@
+{
+  "mappings": {
+    "dynamic_templates": [
+      {
+        "capabilities": {
+          "match": "capabilities",
+          "mapping": {
+            "type": "nested",
+            "properties": {
+              "name": {"type": "keyword"},
+              "description": {"type": "string"}
+            }
+          }
+        }
+      },
+      {
+        "configuration": {
+          "path_match": "configuration",
+          "mapping": {
+            "type": "nested",
+            "properties": {
+              "name": {"type": "keyword"},
+              "value": {"type": "string"}
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "regid": {"type": "keyword"},
+      "seenip": {"type": "ip"},
+      "date": {"type": "date"},
+      "core_id": {
+        "properties": {
+          "ip4": {"type": "ip"}
+        }
+      },
+      "os_distro": {
+        "properties": {
+          "codename": {"type": "keyword"},
+          "name": {"type": "keyword"},
+          "id": {"type": "keyword"},
+          "version": {"type": "keyword"}
+        }
+      },
+      "os_keys": {
+        "properties": {
+          "apt": {
+            "type": "nested",
+            "properties": {
+              "created": {"type": "date"},
+              "expires": {"type": "date"}
+            }
+          }
+        }
+      },
+      "os_network": {
+        "properties": {
+          "interfaces": {
+            "properties": {
+              "ip4": {
+                "type": "nested",
+                "properties": {
+                  "address": {"type": "ip"}
+                }
+              },
+              "ip6": {
+                "type": "nested",
+                "properties": {
+                  "address": {"type": "ip"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "os_uptime": {
+        "properties": {
+          "unixtime": {"type": "date"}
+        }
+      },
+      "sys_cpu": {
+        "properties": {
+          "cores": {"type": "integer"},
+          "cpus": {"type": "integer"}
+        }
+      },
+      "sys_impi": {
+        "properties": {
+          "IP Address": {"type": "ip"},
+          "Default Gateway IP": {"type": "ip"}
+        }
+      },
+      "sys_storage": {
+        "type": "nested",
+        "properties": {
+          "size": {"type": "long"}
+        }
+      }
+    }
+  }
+}
