@@ -1,0 +1,37 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: ethtool(ethtool)
+
+ethtool=$(which ethtool 2>/dev/null)
+test -z "$ethtool" && exit 0  # no ethtool
+
+ethtool_module() {
+    local link=$1
+    local prefix=$2
+    local val
+    if val=$(ethtool -m "$link" 2>/dev/null) && test -n "$val"; then
+        echo "$prefix{\"Device Identifier\": \"$link\""
+        echo "$val" | sed -e '
+          /Laser tx bias current/d
+          /Transmit avg optical power/d
+          /Rcvr signal avg optical power/d
+          s/"//g;s/[[:blank:]]\+/ /g;s/^ //;s/ $//
+          s/^\([^:]*\) : *\(.*\)/,"\1": "\2"/
+        '
+        echo "}"
+    else
+        echo "$link: not readable" >&2
+        false
+    fi
+}
+
+links=$(ip link | sed '/^[0-9]*:/!d;s/^[^:]*: \([^@:]*\).*/\1/' | sort -V)
+comma=
+echo '['
+for link in $links; do
+    if ethtool_module "$link" $comma 2>/dev/null; then
+        comma=,
+    fi
+done
+echo ']'
