@@ -2,6 +2,7 @@
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only, optional
 # REQUIRES: lldpctl(lldpd)
+# REQUIRES: printf(coreutils)
 # REQUIRES: sed(sed)
 
 # Using json0 because it is "easier to parse" than json. Both have arrays,
@@ -28,6 +29,7 @@ if test $ret -ne 0 || test -z "$default_output"; then
     exit 1
 fi
 
-echo "{\"lldpctl.default\": "
-echo "$default_output" | sed -e 's/"age": *"[^"]*" *,\?//g' # drop changing age
-echo "}"
+# Use printf because echo may expand the existing \n's to real
+# linefeeds, breaking the gocollect JS parser.
+printf '{"lldpctl.default":\n%s\n}\n' "$default_output" |
+    sed -e 's/"age": *"[^"]*" *,\?//g' # drop changing age
