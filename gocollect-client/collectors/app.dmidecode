@@ -34,7 +34,13 @@ END {
                     if (substr(array[idx], 1, 2) == "\t\t") {
                         if (comma_3) print ","
                         else comma_3 = 1
-                        print "\"" substr(array[idx], 3) "\""
+                        if (substr(array[idx], 1, 3) == "\t\t\t")
+                            # Management Controller Host Interface
+                            # -> Protocol ID: 04 (Redfish over IP)
+                            # -> -> [...info...]
+                            print "\"FIXME: " substr(array[idx], 4) "\""
+                        else
+                            print "\"" substr(array[idx], 3) "\""
                     } else {
                         break
                     }
