@@ -53,7 +53,7 @@ Optional:
 
     $ cat > .git/gbp.conf << EOF
     [DEFAULT]
-    upstream-branch=master
+    upstream-branch=main
     debian-branch=debian
 
     [buildpackage]
@@ -113,17 +113,17 @@ License
 
 The source code is licensed according to the GNU GPLv3+;
 see `LICENSE
-<https://github.com/ossobv/gocollect/blob/master/LICENSE>`_.
+<https://github.com/ossobv/gocollect/blob/main/LICENSE>`_.
 
 The artwork |--| the GoCollect logo |--| is licensed according to the
 *Attribution-NonCommercial-ShareAlike 4.0 International* Creative Commons
 license (CC BY-NC-SA 4.0);
 see `LICENSE.CC.BY-NC-SA.4-0.txt
-<https://github.com/ossobv/gocollect/blob/master/artwork/LICENSE.CC.BY-NC-SA.4-0.txt>`_.
+<https://github.com/ossobv/gocollect/blob/main/artwork/LICENSE.CC.BY-NC-SA.4-0.txt>`_.
 
 
 
-.. |GoCollect| image:: https://raw.githubusercontent.com/ossobv/gocollect/master/gocollect.png
+.. |GoCollect| image:: https://raw.githubusercontent.com/ossobv/gocollect/main/gocollect.png
     :alt: GoCollect
 .. |bettercodehub| image:: https://bettercodehub.com/edge/badge/ossobv/gocollect
 .. |goreportcard| image:: https://goreportcard.com/badge/github.com/ossobv/gocollect
