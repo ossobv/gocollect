@@ -1,15 +1,18 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only
+# REQUIRES: awk(awk)
 # REQUIRES: coreutils(printf sort tr)
 # REQUIRES: debianutils(which)
 # REQUIRES: sed(sed)
-# REQUIRES: smartmontools(smartctl)
 # REQUIRES: util-linux(lsblk)
+# OPTIONAL: nvme-cli(nvme)
+# OPTIONAL: smartmontools(smartctl)
 
 
-if ! which smartctl >/dev/null 2>&1; then
-    echo "error: This script requires smartctl. See smartmontools." >&2
+if ! which smartctl >/dev/null 2>&1 && ! which nvme >/dev/null 2>&1; then
+    echo "error: This script requires smartctl/nvme. See smartmontools" >&2
+    echo "error: and/or nvme-cli" >&2
     exit 1
 fi
 
@@ -26,49 +29,76 @@ uniq_by_prefix() {
         fi
     done
 }
-devices=`(
-    smartctl --scan | sed -e 's/ *[[#].*//'
+devices=$( (
+    # smartctl may(?) find disks behind hwraid; adds --stuff sometimes.
+    smartctl --scan 2>/dev/null | sed -e 's/ *[[#].*//'
+    # lsblk finds the nvme devices just fine, no need for 'nvme list'
     lsblk -no TYPE,NAME | sed -e '/^disk/!d;s/[^ ]* */\/dev\//'
-) | LC_ALL=C sort | uniq_by_prefix`
+) | LC_ALL=C sort | uniq_by_prefix)
 
 
 device_n=0
 printf '['
-echo "$devices" | while read line; do
-    # Add -T verypermissive because we don't care if "mandatory" smart
-    # commands don't work.
-    smartctl=`smartctl -T verypermissive -i $line`  # regular devices
-    ret=$?
+if which smartctl >/dev/null 2>&1; then
+    echo "$devices" | while read line; do
+        # Add -T verypermissive because we don't care if "mandatory" smart
+        # commands don't work.
+        smartctl=$(smartctl -T verypermissive -i $line)  # regular devices
+        ret=$?
 
-    # Retry with -d scsi for /dev/nvme* devices?
-    test $ret -ne 0 &&
-        smartctl=`smartctl -T verypermissive -d scsi -i $line` &&
-        ret=0
+        # Retry with -d scsi for /dev/nvme* devices?
+        test $ret -ne 0 &&
+            smartctl=$(smartctl -T verypermissive -d scsi -i $line) &&
+            ret=0
 
-    if test $ret -eq 0; then
-        comma=
-        test $device_n -gt 0 && comma=,
+        if test $ret -eq 0; then
+            comma=
+            test $device_n -gt 0 && comma=,
+            device_n=$((device_n + 1))
 
-        dev=`echo "$line" | sed -e 's/ .*//;s/"//g'`
-        name=`echo "$smartctl" |
-              sed -e '/^Vendor\|^Product\|Model/!d;s/^[^:]*:[[:blank:]]*//;s/"//g' |
-              tr '\n' ' ' | sed -e 's/[[:blank:]][[:blank:]]*/ /g;s/^ *//;s/ *$//'`
-        bytes=$(echo "$smartctl" | sed -e '
+            # Removed 'smartctl --scan' added stuff
+            dev=$(echo "$line" | sed -e 's/ .*//;s/"//g')
+            product=$(echo "$smartctl" |
+              sed -e '
+                /^Vendor\|^Product\|Model/!d
+                s/^[^:]*:[[:blank:]]*//;s/"//g' |
+              tr '\n' ' ' |
+              sed -e 's/[[:blank:]][[:blank:]]*/ /g;s/^ *//;s/ *$//')
+            bytes=$(echo "$smartctl" | sed -e '
                 /Capacity/!d
                 s/^[^:]*:[[:blank:]]*//
                 s/ bytes.*//;s/ [[].*//
                 s/,//g;s/"//g' |
-                head -n1)
-        serial=`echo "$smartctl" |
-                sed -e '/^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g'`
-        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
-            "$comma" logicalname "$dev" product "$name" \
-            serial "$serial" size "$bytes"
-
+              head -n1)
+            serial=$(echo "$smartctl" | sed -e '
+                /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
+            printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+                "$comma" logicalname "$dev" product "$product" \
+                serial "$serial" size "$bytes"
+        else
+            echo "warning: failed to read $line" >&2
+        fi
+    done
+else
+    nvme_all=$(nvme list)
+    nvme_json=$(nvme list -o json)
+    echo "$devices" | while read dev; do
+        comma=
+        test $device_n -gt 0 && comma=,
         device_n=$((device_n + 1))
-        last_valid="$dev"
-    else
-        echo "warning: failed to read $line" >&2
-    fi
-done
+
+        nvme_line=$(echo "$nvme_all" | awk "{if(\$1==\"$dev\")print}")
+        product=$(echo "$nvme_line" | awk -F'   *' '{print $3}')
+        serial=$(echo "$nvme_line" | awk -F'   *' '{print $2}')
+        #bytes=$(echo "$nvme_line" | awk -F'   *' '{print $5}')
+        #bytes_unit=$(echo "$nvme_line" | awk -F'   *' '{print $6}')
+        #bytes_unit=${bytes_unit%% *}  # "TB / blah.." -> "TB"
+        escdev=$(echo "$dev" | sed -e 's#/#\\/#g')
+        bytes=$(echo "$nvme_json" | sed -ne '
+            /"'"$escdev"'"/,/}/{/PhysicalSize/{s/.* : //;s/,//;p}}')
+        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+            "$comma" logicalname "$dev" product "$product" \
+            serial "$serial" size "$bytes"
+    done
+fi
 printf ']\n'
