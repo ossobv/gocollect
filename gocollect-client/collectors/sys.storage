@@ -34,7 +34,8 @@ devices=$( (
     smartctl --scan 2>/dev/null | sed -e 's/ *[[#].*//'
     # lsblk finds the nvme devices just fine, no need for 'nvme list'
     lsblk -no TYPE,NAME | sed -e '/^disk/!d;s/[^ ]* */\/dev\//'
-) | LC_ALL=C sort | uniq_by_prefix)
+) | LC_ALL=C sort | uniq_by_prefix | sed -e '/^\/dev\/rbd[0-9]\+$/d')
+# ^- exclude Ceph "RADOS Block Device"
 
 
 device_n=0
