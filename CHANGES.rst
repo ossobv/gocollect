@@ -1,6 +1,15 @@
 Changes
 -------
 
+* v0.8.2 [2020-01-26]:
+
+  - app.dmidecode: Fix issue with triple TABs.
+  - app.ethtool-modules: Add info about ethernet modules.
+  - app.lldpctl: Fix issue with LFs.
+  - sys.storage: Fix issue on systems without smartmontools, but with nvme.
+
+  - backend: Add backend to import RabbitMQ data to ElasticSearch.
+
 * v0.8.1 [2020-05-15]:
 
   - app.lldpctl: Add lldpctl monitoring.
