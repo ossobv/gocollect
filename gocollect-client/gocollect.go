@@ -37,7 +37,7 @@ const defaultRegidFilename = "/var/lib/gocollect/core.id.regid"
 func printVersionAndExit() {
 	fmt.Printf(
 		("gocollect (GoCollect sysinfo collector) %s\n" +
-			"Copyright (C) 2016-2017 OSSO B.V.\n" +
+			"Copyright (C) 2016-2021 OSSO B.V.\n" +
 			"License GPLv3+: GNU GPL version 3 or later " +
 			"<http://gnu.org/licenses/gpl.html>.\n" +
 			"This is free software: you are free to change " +
