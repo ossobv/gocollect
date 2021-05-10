@@ -71,11 +71,19 @@ if which smartctl >/dev/null 2>&1; then
                 s/ bytes.*//;s/ [[].*//
                 s/,//g;s/"//g' |
               head -n1)
+            sectorsize=$(echo "$smartctl" | sed -e '
+                /Formatted LBA Size/!d;s/^[^:]*:[[:blank:]]*//;s/"//g' |
+                sort -n | head -n1)
+            test -z "$sectorsize" && \
+                sectorsize=$(echo "$smartctl" | sed -e '
+                    /^\(Sector Size\|Logical block size\)/!d
+                    s/^[^:]*:[[:blank:]]*//
+                    s/ bytes.*//;s/"//g' | head -n1)
             serial=$(echo "$smartctl" | sed -e '
                 /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
-            printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+            printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
                 "$comma" logicalname "$dev" product "$product" \
-                serial "$serial" size "$bytes"
+                serial "$serial" size "$bytes" sectorsize "$sectorsize"
         else
             echo "warning: failed to read $line" >&2
         fi
@@ -97,9 +105,11 @@ else
         escdev=$(echo "$dev" | sed -e 's#/#\\/#g')
         bytes=$(echo "$nvme_json" | sed -ne '
             /"'"$escdev"'"/,/}/{/PhysicalSize/{s/.* : //;s/,//;p}}')
-        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+        sectorsize=$(echo "$nvme_json" | sed -ne '
+            /"'"$escdev"'"/,/}/{/SectorSize/{s/.* : //;s/,//;p}}')
+        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
             "$comma" logicalname "$dev" product "$product" \
-            serial "$serial" size "$bytes"
+            serial "$serial" size "$bytes" sectorsize "$sectorsize"
     done
 fi
 printf ']\n'
