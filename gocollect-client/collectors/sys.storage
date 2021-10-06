@@ -74,11 +74,12 @@ if which smartctl >/dev/null 2>&1; then
             sectorsize=$(echo "$smartctl" | sed -e '
                 /Formatted LBA Size/!d;s/^[^:]*:[[:blank:]]*//;s/"//g' |
                 sort -n | head -n1)
+            # Sector Size:      512 bytes logical/physical
+            # Sector Sizes:     512 bytes logical, 4096 bytes physical
             test -z "$sectorsize" && \
                 sectorsize=$(echo "$smartctl" | sed -e '
                     /^\(Sector Size\|Logical block size\)/!d
-                    s/^[^:]*:[[:blank:]]*//
-                    s/ bytes.*//;s/"//g' | head -n1)
+                    s/^[^:]*:.*[[:blank:]]\([0-9]\+\) bytes.*/\1/' | head -n1)
             serial=$(echo "$smartctl" | sed -e '
                 /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
             printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
