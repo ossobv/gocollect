@@ -21,11 +21,16 @@ if test -r "$OSREL"; then
     # VERSION_ID (16.04.4 LTS (Xenial Xerus)). On Cumulus Linux, the
     # VERSION is prefixed by a name.
     version=$(sed -e '/^VERSION=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
-    # If the version is "cumulus linux 1.2.3", drop the leading
-    # keywords.
-    number=$(echo "$version" |
-             sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
-                     s/\([^0-9]\)0\+\([0-9]\)/\1\2/g;s/.* //')
+    # If this is Debian, use the version from /etc/debian_version.
+    if grep -q '^ID=debian$' "$OSREL" && test -s /etc/debian_version; then
+        number=$(sed -e 's/[.]/,/g' /etc/debian_version)
+    else
+        # If the version is "cumulus linux 1.2.3", drop the leading
+        # keywords.
+        number=$(echo "$version" |
+                 sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
+                         s/\([^0-9]\)0\+\([0-9]\)/\1\2/g;s/.* //')
+    fi
     for key in VERSION_CODENAME UBUNTU_CODENAME; do
         codename=$(sed -e '/^'$key'=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
         test -n "$codename" && break
