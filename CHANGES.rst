@@ -7,7 +7,7 @@ Changes
   - os.distro: Add minor version on Debian
   - sys.storage: Show physical sector size
 
-* v0.8.2 [2020-01-26]:
+* v0.8.2 [2021-01-26]:
 
   - app.dmidecode: Fix issue with triple TABs.
   - app.ethtool-modules: Add info about ethernet modules.
