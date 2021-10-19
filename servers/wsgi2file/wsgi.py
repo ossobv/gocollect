@@ -138,7 +138,7 @@ def main():
         try:
             for item in application(environ, start_response):
                 yield item
-        except:
+        except Exception:
             print_exc()
             body = b'{"error": "Broken Stuff"}'
             start_response(
@@ -148,6 +148,6 @@ def main():
             yield body
 
     port = 8000
-    httpd = make_server('', port, wrapped_application)
-    print('Serving on port {0}...'.format(port))
-    httpd.serve_forever()
+    with make_server('', port, wrapped_application) as httpd:
+        print('Serving on port {0}...'.format(port))
+        httpd.serve_forever()

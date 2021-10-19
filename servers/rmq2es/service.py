@@ -2,7 +2,7 @@ import json
 import logging
 import pika
 from os import environ
-from urlparse import urlparse
+from urllib.parse import urlparse
 import re
 import sys
 

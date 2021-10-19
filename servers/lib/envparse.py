@@ -1,5 +1,5 @@
 from collections import namedtuple
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 
 def _hide_secrets(secret_fields, namedtuple_):
