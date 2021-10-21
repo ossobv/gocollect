@@ -133,7 +133,8 @@ class NetboxRequest:
             fqdn.replace('-', '.'),  # host.with.dash.in.name
         ])
         for q in search_params:
-            obj = self.get_by_params(klass.url, {'q': q}, klass)
+            obj = self.get_by_params(
+                klass.url, {'q': q, 'status': 'active'}, klass)
             if obj is not None:
                 return obj
 
