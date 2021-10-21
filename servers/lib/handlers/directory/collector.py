@@ -23,7 +23,7 @@ class Collector(DirectoryMixin):
 
     def write_temp(self):
         temp = tempfile.NamedTemporaryFile(
-            dir=self.get_keydir(), delete=False)
+            mode='w+', dir=self.get_keydir(), delete=False)
         try:
             temp.write(self.data)
 
