@@ -134,7 +134,8 @@ class NetboxRequest:
         ])
         for q in search_params:
             obj = self.get_by_params(
-                klass.url, {'q': q, 'status': 'active'}, klass)
+                klass.url, {'q': q, 'status': ('active', 'planned', 'staged')},
+                klass)
             if obj is not None:
                 return obj
 
