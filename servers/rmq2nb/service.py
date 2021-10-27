@@ -136,7 +136,8 @@ class NetboxRequest:
             obj = self.get_by_params(
                 klass.url, {'q': q, 'status': ('active', 'planned', 'staged')},
                 klass)
-            if obj is not None:
+            if (obj is not None
+                    and obj.obj['custom_fields']['gocollect_id'] is None):
                 return obj
 
 
