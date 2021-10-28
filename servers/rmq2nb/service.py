@@ -486,6 +486,7 @@ class Device(BaseResource):
             'device_type': cls.type,
             'site': site,
             'custom_fields': {
+                'service_code_device': 'netbox-device',
                 'gocollect_id': data['regid'],
                 'machine_id': data.get('machine-id'),
             }
