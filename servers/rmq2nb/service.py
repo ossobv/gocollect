@@ -323,7 +323,10 @@ class BaseResource:
         if interface is not None:
             updates = {}
             for param in list(data.keys()):
-                if param in (self.param[:-3], 'parent'):
+                if param in ('type',):
+                    # Leave the interface speed/type as set by the user.
+                    pass
+                elif param in (self.param[:-3], 'parent'):
                     # device/vm/parent is a nested object.
                     value = (
                         interface[param]['id'] if interface[param] else None)
