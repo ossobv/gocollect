@@ -374,14 +374,15 @@ class BaseResource:
             if new_name is not None and new_name not in interfaces:
                 if dry_run:
                     log.info(
-                        'Would rename %s interface %s to %s', self,
-                        iface['display'], new_name)
+                        'Would rename %s interface %s to %s', self, name,
+                        new_name)
+                    iface['name'] = iface['display'] = new_name
                 else:
-                    interfaces[new_name] = self.netbox.patch(
+                    iface = self.netbox.patch(
                         iface['url'], json={'name': new_name})
                     log.info(
-                        '%s renamed interface %s to %s', self,
-                        iface['display'], new_name)
+                        '%s renamed interface %s to %s', self, name, new_name)
+                interfaces[new_name] = iface
             elif iface.get('cable') or iface.get('connected_endpoint'):
                 log.warning(
                     'Preserving %s interface %s because it is connected '
