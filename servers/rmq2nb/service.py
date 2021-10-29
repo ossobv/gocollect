@@ -409,7 +409,7 @@ class BaseResource:
                         ips.append(iface_ip)
                         candidates.add(name)
         if len(candidates) == 1:
-            return candidates[0]
+            return candidates.pop()
         elif len(candidates) > 1:
             raise ValueError(
                 'Cannot uniquely identify the interface name matching '
