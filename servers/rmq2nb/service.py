@@ -268,24 +268,8 @@ class BaseResource:
             for i in self.get_interfaces()['results']}
         data = self.prepare_interface_data(data)
 
-        special_interfaces = []
-        for name in list(interfaces.keys()):
-            if name in self.special_interfaces:
-                special_interfaces.append(interfaces[name]['id'])
-                continue
-            if name not in data:
-                iface = interfaces.pop(name)
-                if iface.get('cable') or iface.get('connected_endpoint'):
-                    log.warning(
-                        'Preserving %s interface %s because it is connected '
-                        'with cable %r to endpoint %r', self, iface['display'],
-                        iface['cable'], iface['connected_endpoint'])
-                elif dry_run:
-                    log.info(
-                        'Would remove %s interface %s', self, iface['display'])
-                else:
-                    self.netbox.delete(iface['url'])
-                    log.info('%s removed interface %s', self, iface['display'])
+        special_interfaces = self.rename_or_remove_not_configured_interfaces(
+            data, interfaces, addresses, dry_run)
 
         # Keep track which interface/IP address combinations are configured
         # on the gocollect node.
@@ -373,6 +357,63 @@ class BaseResource:
             interface = self.netbox.post(self.interface_url, json=data)
             log.info('%s created interface %s', self, interface['display'])
         return interface
+
+    def rename_or_remove_not_configured_interfaces(
+            self, data, interfaces, addresses, dry_run):
+        special_interfaces = []
+        for name in list(interfaces.keys()):
+            if name in self.special_interfaces:
+                special_interfaces.append(interfaces[name]['id'])
+                continue
+            if name in data:
+                continue
+
+            iface = interfaces.pop(name)
+            new_name = self.find_new_interface_name_with_ip(
+                iface, data, addresses)
+            if new_name is not None and new_name not in interfaces:
+                if dry_run:
+                    log.info(
+                        'Would rename %s interface %s to %s', self,
+                        iface['display'], new_name)
+                else:
+                    interfaces[new_name] = self.netbox.patch(
+                        iface['url'], json={'name': new_name})
+                    log.info(
+                        '%s renamed interface %s to %s', self,
+                        iface['display'], new_name)
+            elif iface.get('cable') or iface.get('connected_endpoint'):
+                log.warning(
+                    'Preserving %s interface %s because it is connected '
+                    'with cable %r to endpoint %r', self, iface['display'],
+                    iface['cable'], iface['connected_endpoint'])
+            elif dry_run:
+                log.info(
+                    'Would remove %s interface %s', self, iface['display'])
+            else:
+                self.netbox.delete(iface['url'])
+                log.info('%s removed interface %s', self, iface['display'])
+
+        return special_interfaces
+
+    def find_new_interface_name_with_ip(self, iface, data, addresses):
+        # If an interface was named differently between host/netbox try to find
+        # the interface by matching it's ip addresses.
+        candidates, ips = set(), []
+        for iface_type, iface_id, iface_ip in addresses:
+            if iface_id != iface['id']:
+                continue
+            for name, iface_data in data.items():
+                for ip in iface_data['ip']:
+                    if str(ip) == iface_ip:
+                        ips.append(iface_ip)
+                        candidates.add(name)
+        if len(candidates) == 1:
+            return candidates[0]
+        elif len(candidates) > 1:
+            raise ValueError(
+                'Cannot uniquely identify the interface name matching '
+                f'addresses {ips}: {candidates}')
 
     def prepare_interface_data(self, data):
         interfaces = []
