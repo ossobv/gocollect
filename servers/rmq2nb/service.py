@@ -565,7 +565,7 @@ class BaseResource:
                 'name': self.bmc_interface,
                 self.param[:-3]: self.obj['id'],
                 'mac_address': data['MAC Address'].upper() or None,
-                'type': self.iface_type,
+                'type': self.bmc_type,
                 'mgmt_only': True,
             })
             log.info('%s created interface %s', self, interface['display'])
@@ -596,6 +596,7 @@ class Device(BaseResource):
 
     @classmethod
     def set_defaults(cls, **kwargs):
+        cls.bmc_type = kwargs.get('bmc_type')
         cls.iface_type = kwargs.get('iface_type')
         cls.role = kwargs.get('role')
         cls.type = kwargs.get('type')
@@ -742,8 +743,8 @@ def main():
     rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
     netbox_url = urlparse(environ.get('RMQ2NB_NB_URI'))
     dry_run = tuple(environ.get('RMQ2NB_DRY_RUN', ALL_KEYS).split())
-    device_iface_type = environ.get(
-        'RMQ2NB_NB_DEVICE_IFACE_TYPE', '1000base-t')
+    iface_type = environ.get('RMQ2NB_NB_DEVICE_IFACE_TYPE', '25gbase-x-sfp28')
+    bmc_type = environ.get('RMQ2NB_NB_DEVICE_BMC_TYPE', '1000base-t')
     device_role = int(environ.get('RMQ2NB_NB_DEVICE_ROLE_ID', 1))
     device_type = int(environ.get('RMQ2NB_NB_DEVICE_TYPE_ID', 1))
     roles_skip_interfaces = tuple(environ.get(
@@ -752,8 +753,8 @@ def main():
     vm_cluster = int(environ.get('RMQ2NB_NB_VM_CLUSTER_ID', 1))
     BaseResource.set_defaults(roles_skip_interfaces=roles_skip_interfaces)
     Device.set_defaults(
-        iface_type=device_iface_type, role=device_role, type=device_type,
-        site=site)
+        bmc_type=bmc_type, iface_type=iface_type, role=device_role,
+        type=device_type, site=site)
     VM.set_defaults(cluster=vm_cluster)
 
     netbox = NetboxRequest(netbox_url)
