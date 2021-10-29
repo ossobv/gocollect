@@ -275,7 +275,7 @@ class BaseResource:
                 continue
             if name not in data:
                 iface = interfaces.pop(name)
-                if iface['cable'] or iface['connected_endpoint']:
+                if iface.get('cable') or iface.get('connected_endpoint'):
                     log.warning(
                         'Preserving %s interface %s because it is connected '
                         'with cable %r to endpoint %r', self, iface['display'],
