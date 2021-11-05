@@ -1,0 +1,123 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: kubectl
+# REQUIRES: sed(sed)
+#
+# A.k.a. Gocollecternetes. Fetches resources that are capable of
+# spawning images, and lists them and their images.
+#
+# Requires a working local kubectl, possibly with config in
+# /root/.kube/config.
+set -eu
+
+KUBECTL_BIN="$(which kubectl 2>/dev/null | head -n1)"
+RESOURCES='cronjobs.batch daemonsets.apps deployments.apps statefulsets.apps'
+CLUSTER=
+
+LC_ALL=C; export LC_ALL
+
+find_kubectl() {
+    KUBECTL=
+    local config
+    for config in '' '--kubeconfig=/root/.kube/config'; do
+        if $KUBECTL_BIN $config get nodes >/dev/null 2>&1; then
+            KUBECTL="$KUBECTL_BIN $config"
+            break
+        fi
+    done
+}
+
+find_cluster_name() {
+    # We use the kubeconfig current context to name the current/visible
+    # cluster.
+    local context
+    context=$($KUBECTL config current-context 2>/dev/null)
+    case $context in
+    ''|local)
+        CLUSTER=
+        ;;
+    *)
+        CLUSTER=$context
+        ;;
+    esac
+}
+
+ns_name_images_to_json() {
+    echo -n "{"
+    local line ns name n
+    n=0
+    while read -r line; do
+        test $n -gt 0 && echo -n ,
+        n=$((n+1))
+        ns=${line%%|*}; line=${line#*|}
+        name=${line%%|*}; line=${line#*|}
+        echo "\"$ns.$name\":["
+        echo "$line" | sed -e 's/^/"/;s/,$/"/;s/,/","/g'
+        echo "]"
+    done
+    echo "}"
+}
+
+dump_ns_name_images() {
+    local header="$1"
+    local resource="$2"
+    echo "\"$header\":"
+    # NOTE: There may be duplicate container images, but they are harder to
+    # filter. Maybe dump them elsewhere in a single images list instead.
+    case $resource in
+    cronjobs.batch)
+        $KUBECTL get $resource --all-namespaces -o=jsonpath="\
+"'{range .items[*]}{.metadata.namespace}{"|"}{.metadata.name}{"|"}'"\
+"'{range .spec.jobTemplate.spec.template.spec.containers[*]}'"\
+"'{.image}{","}{end}{"\n"}{end}' |
+        sort | ns_name_images_to_json
+        ;;
+    *)
+        $KUBECTL get $resource --all-namespaces -o=jsonpath="\
+"'{range .items[*]}{.metadata.namespace}{"|"}{.metadata.name}{"|"}'"\
+"'{range .spec.template.spec.containers[*]}{.image}{","}{end}{"\n"}{end}' |
+        sort | ns_name_images_to_json
+        ;;
+    esac
+}
+
+dump_images() {
+    echo "\"v1.images\":["
+    local resource
+    for resource in $RESOURCES; do
+        case $resource in
+        cronjobs.batch)
+            $KUBECTL get $resource --all-namespaces -o=jsonpath="\
+"'{range .items[*]}'"\
+"'{range .spec.jobTemplate.spec.template.spec.containers[*]}'"\
+"'{.image}{"\n"}{end}{end}'
+            ;;
+        *)
+            $KUBECTL get $resource --all-namespaces -o=jsonpath="\
+"'{range .items[*]}{range .spec.template.spec.containers[*]}'"\
+"'{.image}{"\n"}{end}{end}'
+            ;;
+        esac
+    done | sort -u | sed -e 's/.*/"&",/;$s/,$//'
+    echo "]"
+}
+
+find_kubectl
+if test -z "$KUBECTL"; then
+    if test -t 1; then
+        echo "No kubernetes/k8s stuff found" >&2
+    else
+        echo "{}"
+    fi
+    exit 1
+fi
+find_cluster_name
+
+echo "{"
+echo "\"v1.cluster_name\":\"$CLUSTER\","
+dump_images
+for resource in $RESOURCES; do
+    echo ","
+    dump_ns_name_images "v1.$resource" "$resource"
+done
+echo "}"
