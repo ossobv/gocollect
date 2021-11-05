@@ -38,7 +38,7 @@ def callback(ch, method, properties, body):
             json.dumps(json_body.get('data', {})))
         collector.collect()
 
-    except:  # Never crash
+    except Exception:  # Never crash
         logger.exception('Problem!')
 
 

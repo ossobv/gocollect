@@ -1,13 +1,17 @@
 Changes
 -------
 
+* v0.8.4 [2021-11-05]:
+
+  - app.k8s: Add K8S collection.
+
 * v0.8.3 [2021-10-06]:
 
   - app.psdiff: Add psdiff.db output
   - os.distro: Add minor version on Debian
   - sys.storage: Show physical sector size
 
-* v0.8.2 [2020-01-26]:
+* v0.8.2 [2021-01-26]:
 
   - app.dmidecode: Fix issue with triple TABs.
   - app.ethtool-modules: Add info about ethernet modules.

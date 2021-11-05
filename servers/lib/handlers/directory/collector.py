@@ -30,7 +30,7 @@ class Collector(DirectoryMixin):
             # Always write trailing LF.
             if self.data and self.data[-1] != '\n':
                 temp.write('\n')
-        except:
+        except Exception:
             temp.close()
             os.unlink(temp.name)
             raise
@@ -72,7 +72,7 @@ class Collector(DirectoryMixin):
                 for to_remove in allfiles[4:]:
                     try:
                         os.unlink(os.path.join(datadir, to_remove))
-                    except:
+                    except Exception:
                         pass  # not my problem
         finally:
             if tempname:
