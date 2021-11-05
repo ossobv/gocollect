@@ -31,7 +31,7 @@ find_cluster_name() {
     # We use the kubeconfig current context to name the current/visible
     # cluster.
     local context
-    context=$($KUBECTL config current-context 2>/dev/null)
+    context=$($KUBECTL config current-context 2>/dev/null || true)
     case $context in
     ''|local)
         CLUSTER=
