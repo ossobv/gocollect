@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.8.4 [2021-11-05]:
+
+  - app.k8s: Add K8S collection.
+
 * v0.8.3 [2021-10-06]:
 
   - app.psdiff: Add psdiff.db output
