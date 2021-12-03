@@ -1,6 +1,12 @@
 Changes
 -------
 
+* v0.8.6 [2021-12-03]:
+
+  - app.docker: Initial docker image listings
+  - app.ethtool-modules: Avoid kern.log errors from unused modules
+  - sys.security: Add secureboot flag
+
 * v0.8.5 [2021-11-05]:
 
   - app.k8s: Fix K8S collection.
