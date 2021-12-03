@@ -17,4 +17,4 @@ fi
 docker images \
     --format='{{if not (eq .Tag "<none>")}}"{{.Repository}}:{{.Tag}}":{"digest":"{{.Digest}}","shortid":"{{.ID}}"}{{end}}' 2>/dev/null |
     sort -V |
-    awk 'BEGIN{print "{\"app.docker\":{\"images\":{"} /./{if(n)printf ",";print $0;n=1} END{print "}}}"}'; then
+    awk 'BEGIN{print "{\"app.docker\":{\"images\":{"} /./{if(n)printf ",";print $0;n=1} END{print "}}}"}'
