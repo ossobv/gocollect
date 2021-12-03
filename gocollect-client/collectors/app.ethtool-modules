@@ -26,7 +26,15 @@ ethtool_module() {
     fi
 }
 
-links=$(ip link | sed '/^[0-9]*:/!d;s/^[^:]*: \([^@:]*\).*/\1/' | sort -V)
+# Only read devices that are UP. Otherwise we may get errors like:
+# > i40e 0000:67:00.0 eno1: Module EEPROM memory read not supported.
+# >   Please update the NVM image.
+# > i40e 0000:67:00.1 eno2: Module EEPROM memory read not supported.
+# >   Please update the NVM image.
+# > mlx5_core 0000:01:00.1: mlx5_query_module_id:318:(pid 3434267):
+# >   query_mcia_reg failed: status: 0x3
+links=$(ip link | sed '/^[0-9]*:.* UP /!d;s/^[^:]*: \([^@:]*\).*/\1/' |
+        sort -V)
 comma=
 echo '['
 for link in $links; do

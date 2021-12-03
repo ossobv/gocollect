@@ -1,0 +1,20 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: docker(docker.io)
+# REQUIRES: awk(awk)
+
+# If there is no docker, or it returns failure, return "{}".
+if ! which docker >/dev/null; then
+    echo '{}'
+    exit 0
+fi
+
+#
+# This says nothing about which images are running at this moment. But it does
+# provide an insight in what images might run and if we need to pull in new
+# tags.
+docker images \
+    --format='{{if not (eq .Tag "<none>")}}"{{.Repository}}:{{.Tag}}":{"digest":"{{.Digest}}","shortid":"{{.ID}}"}{{end}}' 2>/dev/null |
+    sort -V |
+    awk 'BEGIN{print "{\"app.docker\":{\"images\":{"} /./{if(n)printf ",";print $0;n=1} END{print "}}}"}'; then
