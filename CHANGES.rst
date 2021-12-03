@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.8.7 [2021-12-03]:
+
+  - app.docker: Sloppy
+
 * v0.8.6 [2021-12-03]:
 
   - app.docker: Initial docker image listings
