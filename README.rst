@@ -65,7 +65,7 @@ Running:
 .. code-block:: console
 
     $ git checkout debian
-    $ gbp buildpackage -us -uc -sa \
+    $ gbp buildpackage -sa \
         --git-debian-branch=debian --git-upstream-tag='v%(version)s'
 
 Note that release candidate versions must be tagged as ``v1.2_rc3``.
