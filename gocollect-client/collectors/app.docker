@@ -14,7 +14,12 @@ fi
 # This says nothing about which images are running at this moment. But it does
 # provide an insight in what images might run and if we need to pull in new
 # tags.
-docker images \
-    --format='{{if not (eq .Tag "<none>")}}"{{.Repository}}:{{.Tag}}":{"digest":"{{.Digest}}","shortid":"{{.ID}}"}{{end}}' 2>/dev/null |
-    sort -V |
-    awk 'BEGIN{print "{\"app.docker\":{\"images\":{"} /./{if(n)printf ",";print $0;n=1} END{print "}}}"}'
+# https://github.com/docker/cli/blob/\
+#   9bc104eff0798097954f5d9bc25ca93f892e63f5/cli/command/formatter/image.go
+docker images --format='{{if not (eq .Tag "<none>")}}'\
+'"{{.Repository}}:{{.Tag}}":{"digest":"{{.Digest}}","shortid":"{{.ID}}",'\
+'"build_date":"{{.CreatedAt}}","human_size":"{{.Size}}"}{{end}}' 2>/dev/null |
+    sort -V | awk '
+BEGIN{print "{\"app.docker\":{\"images\":{"}
+/./{if(n)printf ",";print $0;n=1}
+END{print "}}}"}'
