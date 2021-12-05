@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.8.8 [2021-12-05]:
+
+  - app.docker: Add build_date + human_size
+
 * v0.8.7 [2021-12-03]:
 
   - app.docker: Sloppy
