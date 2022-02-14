@@ -450,7 +450,8 @@ class BaseResource:
         if iface['name'].startswith(('em', 'en', 'eth')):
             # Always include hardware interfaces.
             return True
-        elif iface['name'].startswith(('br-', 'cali', 'docker', 'fl', 'fw')):
+        elif iface['name'].startswith((
+                'br-', 'cali', 'docker', 'fl', 'fw', 'vxlan.calico')):
             # Blacklist local interfaces.
             return False
         elif iface['mac_address'] in ('ee:ee:ee:ee:ee:ee', '0.0.0.0'):
