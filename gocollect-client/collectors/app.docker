@@ -20,6 +20,6 @@ docker images --format='{{if not (eq .Tag "<none>")}}'\
 '"{{.Repository}}:{{.Tag}}":{"digest":"{{.Digest}}","shortid":"{{.ID}}",'\
 '"build_date":"{{.CreatedAt}}","human_size":"{{.Size}}"}{{end}}' 2>/dev/null |
     sort -V | awk '
-BEGIN{print "{\"app.docker\":{\"images\":{"}
+BEGIN{print "{\"images\":{"}
 /./{if(n)printf ",";print $0;n=1}
-END{print "}}}"}'
+END{print "}}"}'
