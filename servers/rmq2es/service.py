@@ -53,7 +53,7 @@ class Storage(object):
         logger.info('Updating %s:%s from %s', regid, key, ip)
         response = self.session.post(
             '/'.join([self.uri.geturl(), '_update', regid]), json=doc)
-        logger.info(response.content)
+        logger.info('Response %s', response.text)
         response.raise_for_status()
 
     def transform_data(self, key, data):

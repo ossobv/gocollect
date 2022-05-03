@@ -19,6 +19,11 @@ log = logging.getLogger(__name__)
 
 IPV6_LOOPBACK = IPNetwork('::1/128')
 
+ALL_KEYS = 'all'
+CORE_ID = 'core.id'
+OS_NETWORK = 'os.network'
+SYS_IPMI = 'sys.ipmi'
+
 
 class Http404Error(Exception):
     pass
@@ -133,8 +138,11 @@ class NetboxRequest:
             fqdn.replace('-', '.'),  # host.with.dash.in.name
         ])
         for q in search_params:
-            obj = self.get_by_params(klass.url, {'q': q}, klass)
-            if obj is not None:
+            obj = self.get_by_params(
+                klass.url, {'q': q, 'status': ('active', 'planned', 'staged')},
+                klass)
+            if (obj is not None
+                    and obj.obj['custom_fields']['gocollect_id'] is None):
                 return obj
 
 
@@ -146,8 +154,8 @@ class BaseResource:
     interface_type = None
     interface_param = None
     iface_type = 'virtual'
-    ipmi_interface = 'IPMI'
-    special_interfaces = (ipmi_interface,)
+    bmc_interface = 'BMC'
+    special_interfaces = (bmc_interface,)
 
     def __str__(self):
         return self.obj["display"]
@@ -169,12 +177,16 @@ class BaseResource:
     def get_create_data(cls, data, netbox):
         raise NotImplementedError()
 
-    def update(self, data):
+    def update(self, data, dry_run=False):
         updates = self.get_update_data(data)
         if updates:
-            log.info('%s applying update %r', self, updates)
-            return self.__class__(
-                self.netbox.patch(self.obj['url'], json=updates), self.netbox)
+            if dry_run:
+                log.info('Would update %s using %r', self, updates)
+            else:
+                log.info('%s applying update %r', self, updates)
+                return self.__class__(
+                    self.netbox.patch(self.obj['url'], json=updates),
+                    self.netbox)
         return self
 
     def get_update_data(self, data):
@@ -214,7 +226,14 @@ class BaseResource:
     def get_interface_by_name(self, name):
         params = {
             self.param: self.obj["id"],
-            'name': name
+            'name': name,
+        }
+        return self.netbox.get_by_params(self.interface_url, params=params)
+
+    def search_interface_by_name(self, name):
+        params = {
+            self.param: self.obj["id"],
+            'q': name,
         }
         return self.netbox.get_by_params(self.interface_url, params=params)
 
@@ -229,7 +248,7 @@ class BaseResource:
         if self.obj[self.role_attr]:
             return self.obj[self.role_attr]['slug']
 
-    def sync_interfaces(self, data):
+    def sync_interfaces(self, data, dry_run=False):
         # Skip interface updates for some roles.
         if self.roles_skip_interfaces:
             role = self.get_role()
@@ -239,6 +258,7 @@ class BaseResource:
                          self.obj['display'], role)
                 return
 
+        # List of interfaces with their IP addresses.
         addresses = {
             (i['assigned_object_type'], i['assigned_object_id'],
                 i['address']): i
@@ -248,16 +268,11 @@ class BaseResource:
             for i in self.get_interfaces()['results']}
         data = self.prepare_interface_data(data)
 
-        special_interfaces = []
-        for name in list(interfaces.keys()):
-            if name in self.special_interfaces:
-                special_interfaces.append(interfaces[name]['id'])
-                continue
-            if name not in data:
-                iface = interfaces.pop(name)
-                self.netbox.delete(iface['url'])
-                log.info('%s removed interface %s', self, iface['display'])
+        special_interfaces = self.rename_or_remove_not_configured_interfaces(
+            data, interfaces, addresses, dry_run)
 
+        # Keep track which interface/IP address combinations are configured
+        # on the gocollect node.
         seen_addresses = []
         for name, iface in data.items():
             if name in self.special_interfaces:
@@ -271,7 +286,7 @@ class BaseResource:
                 else:
                     iface['parent'] = None
             interfaces[name] = self.create_or_update_interface(
-                iface, interfaces)
+                iface, interfaces, dry_run)
             interface_id = interfaces[name]['id']
             for ip in iface['ip']:
                 if not self.is_meaningful_address(ip):
@@ -279,28 +294,39 @@ class BaseResource:
                 key = (self.interface_type, interface_id, str(ip))
                 seen_addresses.append(key)
                 if key not in addresses:
-                    self.assign_ip_address(interface_id, ip)
+                    # Assign IP addresses which have not been assigned.
+                    self.assign_ip_address(interface_id, ip, dry_run)
 
+        # Remove addresses which are not configured on the gocollect node.
         for key, address in addresses.items():
             if (key not in seen_addresses
                     and address['assigned_object_id']
                     not in special_interfaces):
-                try:
-                    self.netbox.delete(address['url'])
+                if dry_run:
                     log.info(
-                        '%s removed ipaddress %s', self, address['display'])
-                except Http404Error:
-                    # The interface with the address was removed.
-                    pass
+                        'Would remove %s ipaddress %s', self,
+                        address['display'])
+                else:
+                    try:
+                        self.netbox.delete(address['url'])
+                        log.info(
+                            '%s removed ipaddress %s', self,
+                            address['display'])
+                    except Http404Error:
+                        # The interface with the address was removed.
+                        pass
 
-    def create_or_update_interface(self, data, interfaces):
+    def create_or_update_interface(self, data, interfaces, dry_run):
         # Remove ip from the post data.
         data = {k: v for k, v in data.items() if k not in ('ip',)}
         interface = interfaces.get(data['name'])
         if interface is not None:
             updates = {}
             for param in list(data.keys()):
-                if param in (self.param[:-3], 'parent'):
+                if param in ('type',):
+                    # Leave the interface speed/type as set by the user.
+                    pass
+                elif param in (self.param[:-3], 'parent'):
                     # device/vm/parent is a nested object.
                     value = (
                         interface[param]['id'] if interface[param] else None)
@@ -314,14 +340,84 @@ class BaseResource:
                 elif param in interface and data[param] != interface[param]:
                     updates[param] = data[param]
             if updates:
-                interface = self.netbox.patch(interface['url'], json=updates)
-                log.info(
-                    '%s updated interface %s with %r', self,
-                    interface['display'], updates)
+                if dry_run:
+                    log.info(
+                        'Would update %s interface %s with %r', self,
+                        interface['display'], updates)
+                else:
+                    interface = self.netbox.patch(
+                        interface['url'], json=updates)
+                    log.info(
+                        '%s updated interface %s with %r', self,
+                        interface['display'], updates)
+        elif dry_run:
+            log.info(
+                'Would create %s interface %s using %r', self, data['name'],
+                data)
+            data['id'] = 'dry-run-' + data['name']
+            return data
         else:
             interface = self.netbox.post(self.interface_url, json=data)
             log.info('%s created interface %s', self, interface['display'])
         return interface
+
+    def rename_or_remove_not_configured_interfaces(
+            self, data, interfaces, addresses, dry_run):
+        special_interfaces = []
+        for name in list(interfaces.keys()):
+            if name in self.special_interfaces:
+                special_interfaces.append(interfaces[name]['id'])
+                continue
+            if name in data:
+                continue
+
+            iface = interfaces.pop(name)
+            new_name = self.find_new_interface_name_with_ip(
+                iface, data, addresses)
+            if new_name is not None and new_name not in interfaces:
+                if dry_run:
+                    log.info(
+                        'Would rename %s interface %s to %s', self, name,
+                        new_name)
+                    iface['name'] = iface['display'] = new_name
+                else:
+                    iface = self.netbox.patch(
+                        iface['url'], json={'name': new_name})
+                    log.info(
+                        '%s renamed interface %s to %s', self, name, new_name)
+                interfaces[new_name] = iface
+            elif iface.get('cable') or iface.get('connected_endpoint'):
+                log.warning(
+                    'Preserving %s interface %s because it is connected '
+                    'with cable %r to endpoint %r', self, iface['display'],
+                    iface['cable'], iface['connected_endpoint'])
+            elif dry_run:
+                log.info(
+                    'Would remove %s interface %s', self, iface['display'])
+            else:
+                self.netbox.delete(iface['url'])
+                log.info('%s removed interface %s', self, iface['display'])
+
+        return special_interfaces
+
+    def find_new_interface_name_with_ip(self, iface, data, addresses):
+        # If an interface was named differently between host/netbox try to find
+        # the interface by matching it's ip addresses.
+        candidates, ips = set(), []
+        for iface_type, iface_id, iface_ip in addresses:
+            if iface_id != iface['id']:
+                continue
+            for name, iface_data in data.items():
+                for ip in iface_data['ip']:
+                    if str(ip) == iface_ip:
+                        ips.append(iface_ip)
+                        candidates.add(name)
+        if len(candidates) == 1:
+            return candidates.pop()
+        elif len(candidates) > 1:
+            raise ValueError(
+                'Cannot uniquely identify the interface name matching '
+                f'addresses {ips}: {candidates}')
 
     def prepare_interface_data(self, data):
         interfaces = []
@@ -354,7 +450,8 @@ class BaseResource:
         if iface['name'].startswith(('em', 'en', 'eth')):
             # Always include hardware interfaces.
             return True
-        elif iface['name'].startswith(('br-', 'cali', 'docker', 'fl', 'fw')):
+        elif iface['name'].startswith((
+                'br-', 'cali', 'docker', 'fl', 'fw', 'vxlan.calico')):
             # Blacklist local interfaces.
             return False
         elif iface['mac_address'] in ('ee:ee:ee:ee:ee:ee', '0.0.0.0'):
@@ -372,7 +469,7 @@ class BaseResource:
             return False
         return not (ip.is_loopback() or ip.is_link_local())
 
-    def assign_ip_address(self, interface_id, ip):
+    def assign_ip_address(self, interface_id, ip, dry_run):
         addresses = []
         assigned_addresses = {}
         for address in self.netbox.get_addresses(str(ip))['results']:
@@ -392,11 +489,15 @@ class BaseResource:
         if len(addresses) > 0 and not assigned_addresses:
             # Address exists but is not assigned.
             address = addresses[0]
-            address = self.netbox.patch(address['url'], json={
-                'assigned_object_type': self.interface_type,
-                'assigned_object_id': interface_id,
-            })
-            log.info('%s updated ipaddress %s', self, address['display'])
+            if dry_run:
+                log.info(
+                    'Would update %s ipaddress %s', self, address['display'])
+            else:
+                address = self.netbox.patch(address['url'], json={
+                    'assigned_object_type': self.interface_type,
+                    'assigned_object_id': interface_id,
+                })
+                log.info('%s updated ipaddress %s', self, address['display'])
         elif len(addresses) > 0 and assigned_addresses and not is_anycast:
             # Address is assigned to another interface.
             log.warning(
@@ -408,16 +509,22 @@ class BaseResource:
             # Determine the context by searching prefixes.
             prefix = self.netbox.get_prefix_for_ip(ip)
             vrf = prefix['vrf']['id'] if prefix and prefix['vrf'] else None
-            address = self.netbox.post('/api/ipam/ip-addresses/', json={
+            data = {
                 'address': str(ip),
                 'assigned_object_type': self.interface_type,
                 'assigned_object_id': interface_id,
                 'vrf': vrf,
                 'role': 'anycast' if is_anycast else None,
-            })
-            log.info('%s created ipaddress %s', self, address['display'])
+            }
+            if dry_run:
+                log.info(
+                    'Would create %s ipaddress %s with %r', self, ip, data)
+            else:
+                address = self.netbox.post(
+                    '/api/ipam/ip-addresses/', json=data)
+                log.info('%s created ipaddress %s', self, address['display'])
 
-    def create_or_update_ipmi(self, data):
+    def create_or_update_ipmi(self, data, dry_run=False):
         if 'error' in data:
             log.debug('%s does not have IPMI devices', self)
             return
@@ -426,19 +533,40 @@ class BaseResource:
             return
 
         ip = IPNetwork(f'{data["IP Address"]}/{data["Subnet Mask"]}')
-        interface = self.get_interface_by_name(self.ipmi_interface)
+        interface = self.get_interface_by_name(self.bmc_interface)
+        if interface is None:
+            # Try with a broader search request.
+            for name in (self.bmc_interface, 'IPMI'):
+                interface = self.search_interface_by_name(name)
+                if interface is not None:
+                    break
+
         if interface is not None:
+            updates = {}
             if data['MAC Address'].upper() != interface['mac_address']:
-                interface = self.netbox.patch(interface['url'], json={
-                    'mac_address': data['MAC Address'],
-                })
-                log.info('%s updated interface %s', self, interface['display'])
+                updates['mac_address'] = data['MAC Address']
+            if interface['name'] != self.bmc_interface:
+                updates['name'] = self.bmc_interface
+
+            if updates:
+                if dry_run:
+                    log.info(
+                        'Would update %s interface %s with %r', self,
+                        interface['display'], updates)
+                else:
+                    interface = self.netbox.patch(
+                        interface['url'], json=updates)
+                    log.info(
+                        '%s updated interface %s', self, interface['display'])
+        elif dry_run:
+            log.info('Would create %s interface %s', self, self.bmc_interface)
+            return
         else:
             interface = self.netbox.post(self.interface_url, json={
-                'name': self.ipmi_interface,
+                'name': self.bmc_interface,
                 self.param[:-3]: self.obj['id'],
                 'mac_address': data['MAC Address'].upper() or None,
-                'type': self.iface_type,
+                'type': self.bmc_type,
                 'mgmt_only': True,
             })
             log.info('%s created interface %s', self, interface['display'])
@@ -446,11 +574,17 @@ class BaseResource:
         addresses = self.get_addresses(interface=interface['id'])['results']
         if len(addresses) == 1 and addresses[0]['address'] == str(ip):
             return
-        self.assign_ip_address(interface['id'], ip)
+        self.assign_ip_address(interface['id'], ip, dry_run)
         for address in addresses:
             if address['address'] != str(ip):
-                self.netbox.delete(address['url'])
-                log.info('%s removed ipaddress %s', self, address['display'])
+                if dry_run:
+                    log.info(
+                        'Would remove %s ipaddress %s', self,
+                        address['display'])
+                else:
+                    self.netbox.delete(address['url'])
+                    log.info(
+                        '%s removed ipaddress %s', self, address['display'])
 
 
 class Device(BaseResource):
@@ -463,6 +597,7 @@ class Device(BaseResource):
 
     @classmethod
     def set_defaults(cls, **kwargs):
+        cls.bmc_type = kwargs.get('bmc_type')
         cls.iface_type = kwargs.get('iface_type')
         cls.role = kwargs.get('role')
         cls.type = kwargs.get('type')
@@ -483,6 +618,7 @@ class Device(BaseResource):
             'device_type': cls.type,
             'site': site,
             'custom_fields': {
+                'service_code_device': 'netbox-device',
                 'gocollect_id': data['regid'],
                 'machine_id': data.get('machine-id'),
             }
@@ -515,14 +651,17 @@ class VM(BaseResource):
 
 class Storage(object):
     keys = [
-        'core.id',
-        'os.network',
-        'sys.ipmi',
+        CORE_ID,
+        OS_NETWORK,
+        SYS_IPMI,
     ]
 
     def __init__(self, netbox, dry_run):
         self.netbox = netbox
-        self.dry_run = dry_run
+        if ALL_KEYS in dry_run:
+            self.dry_run = self.keys[:]
+        else:
+            self.dry_run = dry_run
 
     def create_resource(self, data):
         if ('system-manufacturer' not in data
@@ -533,7 +672,7 @@ class Storage(object):
         # The resource may exist without the gocollect id.
         obj = self.netbox.get_by_fqdn(Resource, data['fqdn'])
         if obj is not None:
-            if self.dry_run:
+            if CORE_ID in self.dry_run:
                 log.info(
                     'Would associate %s with %s using %r', data['regid'],
                     obj, obj.get_update_data(data))
@@ -542,7 +681,7 @@ class Storage(object):
                     'Associated %s with %s %s', data['regid'], obj,
                     obj.obj['url'])
                 return obj.update(data)
-        elif self.dry_run:
+        elif CORE_ID in self.dry_run:
             log.info(
                 'Would create %s for %s using %r', data['regid'], data['fqdn'],
                 Resource.get_create_data(data, self.netbox))
@@ -560,21 +699,21 @@ class Storage(object):
 
     def store(self, regid, collectkey, data):
         obj = self.get_resource(regid)
-        if obj is None and collectkey == 'core.id':
+        if obj is None and collectkey == CORE_ID:
             # Need core.id to create the object.
             self.create_resource(data)
-        elif self.dry_run:
-            pass
         elif obj is not None:
             log.info(
                 'Updating %s:%s on %s %s', regid, collectkey, obj,
                 obj.obj['url'])
-            if collectkey == 'core.id':
-                obj.update(data)
-            elif collectkey == 'os.network':
-                obj.sync_interfaces(data)
-            elif collectkey == 'sys.ipmi':
-                obj.create_or_update_ipmi(data)
+            if collectkey == CORE_ID:
+                obj.update(data, dry_run=bool(CORE_ID in self.dry_run))
+            elif collectkey == OS_NETWORK:
+                obj.sync_interfaces(
+                    data, dry_run=bool(OS_NETWORK in self.dry_run))
+            elif collectkey == SYS_IPMI:
+                obj.create_or_update_ipmi(
+                    data, dry_run=bool(SYS_IPMI in self.dry_run))
 
     def callback(self, ch, method, properties, body):
         try:
@@ -604,10 +743,9 @@ def main():
     # rmq://HOST[:PORT]/VIRTUAL_HOST/EXCHANGE[/QUEUE]
     rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
     netbox_url = urlparse(environ.get('RMQ2NB_NB_URI'))
-    dry_run = bool(
-        environ.get('RMQ2NB_DRY_RUN', 'false').lower() in ('1', 'true'))
-    device_iface_type = environ.get(
-        'RMQ2NB_NB_DEVICE_IFACE_TYPE', '1000base-t')
+    dry_run = tuple(environ.get('RMQ2NB_DRY_RUN', ALL_KEYS).split())
+    iface_type = environ.get('RMQ2NB_NB_DEVICE_IFACE_TYPE', '25gbase-x-sfp28')
+    bmc_type = environ.get('RMQ2NB_NB_DEVICE_BMC_TYPE', '1000base-t')
     device_role = int(environ.get('RMQ2NB_NB_DEVICE_ROLE_ID', 1))
     device_type = int(environ.get('RMQ2NB_NB_DEVICE_TYPE_ID', 1))
     roles_skip_interfaces = tuple(environ.get(
@@ -616,8 +754,8 @@ def main():
     vm_cluster = int(environ.get('RMQ2NB_NB_VM_CLUSTER_ID', 1))
     BaseResource.set_defaults(roles_skip_interfaces=roles_skip_interfaces)
     Device.set_defaults(
-        iface_type=device_iface_type, role=device_role, type=device_type,
-        site=site)
+        bmc_type=bmc_type, iface_type=iface_type, role=device_role,
+        type=device_type, site=site)
     VM.set_defaults(cluster=vm_cluster)
 
     netbox = NetboxRequest(netbox_url)

@@ -41,7 +41,8 @@ Place this in ``/etc/docker/containers.d/gocollect-rmq2nb.env``::
     RMQ2NB_NB_ROLES_SKIP_INTERFACES=
     RMQ2NB_LOGLEVEL=INFO
     # Test gocollect id and fqdn matching without writing to netbox.
-    RMQ2NB_DRY_RUN=true
+    # Use all or any gocollect keys to enable dry run on those keys.
+    RMQ2NB_DRY_RUN=os.network sys.ipmi
 
 And use the following *Systemd* template service as
 ``/etc/systemd/system/docker@.service``::
