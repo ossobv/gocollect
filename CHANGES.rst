@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.8.9 [2022-05-03]:
+
+  - app.docker: Correct/fix double keys (app.docker->app.docker->images)
+  - app.k8s: Add v1.helm lookup
+
 * v0.8.8 [2021-12-05]:
 
   - app.docker: Add build_date + human_size
