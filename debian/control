@@ -13,6 +13,7 @@ Package: gocollect
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, apt,
  base-files (>=7.2) | lsb-release, dmidecode, iproute2 | iproute, procps
+Recommends: coreutils, gzip, jq
 Description: Collect rarely changing system info for server mapping.
  GoCollect collects various pieces of system info and publishes them to
  a central server.
