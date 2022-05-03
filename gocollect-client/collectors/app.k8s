@@ -1,7 +1,7 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: kubectl
-# REQUIRES: sed(sed)
+# REQUIRES: base64(coreutils) jq(jq) sed(sed) zcat(gzip)
 #
 # A.k.a. Gocollecternetes. Fetches resources that are capable of
 # spawning images, and lists them and their images.
@@ -102,6 +102,42 @@ dump_images() {
     echo "]"
 }
 
+helm_get_all_releases() {
+    $KUBECTL get secret \
+        --field-selector type=helm.sh/release.v1 \
+        --all-namespaces \
+        -o=jsonpath='{range .items[*]}{.data.release}{end}'
+}
+
+helm_get_decoded_releases() {
+    helm_get_all_releases | base64 -d | base64 -d | zcat 2>/dev/null
+}
+
+help_get_trimmed_releases() {
+    helm_get_decoded_releases | jq -r "\
+        select(.info.status == \"deployed\") | \
+        del(.chart.files) | \
+        del(.chart.schema) | \
+        del(.chart.templates) | \
+        del(.manifest)"
+}
+
+dump_helm_releases() {
+    if command -v jq >/dev/null; then
+        help_get_trimmed_releases | jq -s "map(
+            del(.chart.values.image.pullPolicy) | \
+            del(.chart.values.image.pullSecrets) | \
+            {(.namespace + \".\" + .chart.metadata.name): { \
+                first_deployed: .info.first_deployed, \
+                last_deployed: .info.last_deployed, \
+                chart_version: .chart.metadata.version, \
+                app_version: .chart.metadata.appVersion, \
+                values_image: .chart.values.image}}) | add"
+    else
+        echo '"ERROR: jq(1) missing"'
+    fi
+}
+
 find_kubectl
 if test -z "$KUBECTL"; then
     if test -t 1; then
@@ -116,6 +152,8 @@ find_cluster_name
 echo "{"
 echo "\"v1.cluster_name\":\"$CLUSTER\","
 dump_images
+echo ',"v1.helm":'
+dump_helm_releases
 for resource in $RESOURCES; do
     echo ","
     dump_ns_name_images "v1.$resource" "$resource"
