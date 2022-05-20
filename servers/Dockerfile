@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
 RUN apt-get update -q && \
     apt-get install -qqy --no-install-recommends \
