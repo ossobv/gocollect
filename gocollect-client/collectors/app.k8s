@@ -28,16 +28,21 @@ find_kubectl() {
 }
 
 find_cluster_name() {
-    # We use the kubeconfig current context to name the current/visible
-    # cluster.
-    local context
-    context=$($KUBECTL config current-context 2>/dev/null || true)
-    case $context in
+    # We use the kubeconfig current context to find the current/visible
+    # cluster. The output of 'get-contexts' looks like:
+    # > CURRENT   NAME      CLUSTER   AUTHINFO   NAMESPACE
+    # >           ctx       clstr1    userinfo
+    # > *         selctx    clstr2    userinfo
+    local cluster
+    cluster=$($KUBECTL config get-contexts 2>/dev/null |
+        awk '/^[*]/{print $3}')
+    # XXX: don't know if 'local' is still needed..
+    case $cluster in
     ''|local)
         CLUSTER=
         ;;
     *)
-        CLUSTER=$context
+        CLUSTER=$cluster
         ;;
     esac
 }
