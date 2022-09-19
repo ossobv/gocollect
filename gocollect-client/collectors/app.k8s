@@ -111,6 +111,7 @@ helm_get_all_releases() {
     $KUBECTL get secret \
         --field-selector type=helm.sh/release.v1 \
         --all-namespaces \
+        --selector=status=deployed \
         -o=jsonpath='{range .items[*]}{.data.release}{end}'
 }
 
