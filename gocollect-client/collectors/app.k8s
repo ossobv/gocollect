@@ -129,15 +129,12 @@ help_get_trimmed_releases() {
 
 dump_helm_releases() {
     if command -v jq >/dev/null; then
-        help_get_trimmed_releases | jq -s "map(
-            del(.chart.values.image.pullPolicy) | \
-            del(.chart.values.image.pullSecrets) | \
+        help_get_trimmed_releases | tee tmp.log | jq -s "map(
             {(.namespace + \".\" + .chart.metadata.name): { \
                 first_deployed: .info.first_deployed, \
                 last_deployed: .info.last_deployed, \
                 chart_version: .chart.metadata.version, \
-                app_version: .chart.metadata.appVersion, \
-                values_image: .chart.values.image}}) | add"
+                app_version: .chart.metadata.appVersion}}) | add"
     else
         echo '"ERROR: jq(1) missing"'
     fi
