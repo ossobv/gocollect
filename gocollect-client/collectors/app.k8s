@@ -19,7 +19,7 @@ LC_ALL=C; export LC_ALL
 find_kubectl() {
     KUBECTL=
     local config
-    for config in '' '--kubeconfig=/root/.kube/config'; do
+    for config in '--kubeconfig=/root/.kube/config' ''; do
         if $KUBECTL_BIN $config get nodes >/dev/null 2>&1; then
             KUBECTL="$KUBECTL_BIN $config"
             break
