@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.8.10 [2022-09-19]:
+
+  - app.k8s: Minor fixes for use on various systems
+
 * v0.8.9 [2022-05-03]:
 
   - app.docker: Correct/fix double keys (app.docker->app.docker->images)
