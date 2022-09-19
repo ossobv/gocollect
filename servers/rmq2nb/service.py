@@ -451,7 +451,7 @@ class BaseResource:
             # Always include hardware interfaces.
             return True
         elif iface['name'].startswith((
-                'br-', 'cali', 'docker', 'fl', 'fw', 'vxlan.calico')):
+                'br-', 'cali', 'docker', 'fl', 'fw', 'kube-', 'vxlan.calico')):
             # Blacklist local interfaces.
             return False
         elif iface['mac_address'] in ('ee:ee:ee:ee:ee:ee', '0.0.0.0'):
@@ -656,12 +656,14 @@ class Storage(object):
         SYS_IPMI,
     ]
 
-    def __init__(self, netbox, dry_run):
+    def __init__(self, netbox, dry_run, names_allowed=()):
         self.netbox = netbox
-        if ALL_KEYS in dry_run:
-            self.dry_run = self.keys[:]
-        else:
-            self.dry_run = dry_run
+        self.dry_run = self.keys[:] if ALL_KEYS in dry_run else dry_run
+        # names_allowed is a list with tuples (name, is_allowed)
+        # ordered by name length and is checked to allow/deny host
+        # registration/updates by fqdn by the first match that matches a name.
+        self.names_allowed = sorted(
+            names_allowed, key=lambda i: len(i[0]), reverse=True)
 
     def create_resource(self, data):
         if ('system-manufacturer' not in data
@@ -700,8 +702,17 @@ class Storage(object):
     def store(self, regid, collectkey, data):
         obj = self.get_resource(regid)
         if obj is None and collectkey == CORE_ID:
-            # Need core.id to create the object.
-            self.create_resource(data)
+            if self.is_allowed_name(data['fqdn']):
+                # Need core.id to create the object.
+                self.create_resource(data)
+            else:
+                log.debug(
+                    'Ignoring %s:%s name %s is not allowed',
+                    regid, collectkey, data['fqdn'])
+        elif not self.is_allowed_name(str(obj)):
+            log.debug(
+                'Ignoring %s:%s name %s is not allowed',
+                regid, collectkey, obj)
         elif obj is not None:
             log.info(
                 'Updating %s:%s on %s %s', regid, collectkey, obj,
@@ -714,6 +725,15 @@ class Storage(object):
             elif collectkey == SYS_IPMI:
                 obj.create_or_update_ipmi(
                     data, dry_run=bool(SYS_IPMI in self.dry_run))
+
+    def is_allowed_name(self, name):
+        for candidate, is_allowed in self.names_allowed:
+            if candidate.startswith('^'):
+                if name.startswith(candidate[1:]):
+                    return is_allowed
+            elif name.endswith(candidate):
+                return is_allowed
+        return True
 
     def callback(self, ch, method, properties, body):
         try:
@@ -741,9 +761,21 @@ class Storage(object):
 def main():
     logging.basicConfig(level=environ.get('RMQ2NB_LOGLEVEL', 'INFO').upper())
     # rmq://HOST[:PORT]/VIRTUAL_HOST/EXCHANGE[/QUEUE]
-    rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
-    netbox_url = urlparse(environ.get('RMQ2NB_NB_URI'))
+    try:
+        rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
+    except AssertionError:
+        sys.exit(
+            f'Invalid RMQ2NB_RMQ_URI: {environ.get("RMQ2NB_RMQ_URI", "")!r}')
+    try:
+        netbox_url = urlparse(environ.get('RMQ2NB_NB_URI', ''))
+    except ValueError:
+        sys.exit(
+            f'Invalid RMQ2NB_NB_URI: {environ.get("RMQ2NB_NB_URI", "")!r}')
     dry_run = tuple(environ.get('RMQ2NB_DRY_RUN', ALL_KEYS).split())
+    names_allowed = {
+        i: True for i in environ.get('RMQ2NB_NAME_ALLOWED', '').split()}
+    names_allowed.update({
+        i: False for i in environ.get('RMQ2NB_NAME_DENIED', '').split()})
     iface_type = environ.get('RMQ2NB_NB_DEVICE_IFACE_TYPE', '25gbase-x-sfp28')
     bmc_type = environ.get('RMQ2NB_NB_DEVICE_BMC_TYPE', '1000base-t')
     device_role = int(environ.get('RMQ2NB_NB_DEVICE_ROLE_ID', 1))
@@ -759,7 +791,8 @@ def main():
     VM.set_defaults(cluster=vm_cluster)
 
     netbox = NetboxRequest(netbox_url)
-    storage = Storage(netbox, dry_run=dry_run)
+    storage = Storage(
+        netbox, dry_run=dry_run, names_allowed=names_allowed.items())
 
     if 'test' in sys.argv:
         storage.callback(None, None, None, sys.stdin.read())

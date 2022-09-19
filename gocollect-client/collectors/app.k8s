@@ -19,7 +19,7 @@ LC_ALL=C; export LC_ALL
 find_kubectl() {
     KUBECTL=
     local config
-    for config in '' '--kubeconfig=/root/.kube/config'; do
+    for config in '--kubeconfig=/root/.kube/config' ''; do
         if $KUBECTL_BIN $config get nodes >/dev/null 2>&1; then
             KUBECTL="$KUBECTL_BIN $config"
             break
@@ -28,16 +28,21 @@ find_kubectl() {
 }
 
 find_cluster_name() {
-    # We use the kubeconfig current context to name the current/visible
-    # cluster.
-    local context
-    context=$($KUBECTL config current-context 2>/dev/null || true)
-    case $context in
+    # We use the kubeconfig current context to find the current/visible
+    # cluster. The output of 'get-contexts' looks like:
+    # > CURRENT   NAME      CLUSTER   AUTHINFO   NAMESPACE
+    # >           ctx       clstr1    userinfo
+    # > *         selctx    clstr2    userinfo
+    local cluster
+    cluster=$($KUBECTL config get-contexts 2>/dev/null |
+        awk '/^[*]/{print $3}')
+    # XXX: don't know if 'local' is still needed..
+    case $cluster in
     ''|local)
         CLUSTER=
         ;;
     *)
-        CLUSTER=$context
+        CLUSTER=$cluster
         ;;
     esac
 }
@@ -124,15 +129,12 @@ help_get_trimmed_releases() {
 
 dump_helm_releases() {
     if command -v jq >/dev/null; then
-        help_get_trimmed_releases | jq -s "map(
-            del(.chart.values.image.pullPolicy) | \
-            del(.chart.values.image.pullSecrets) | \
+        help_get_trimmed_releases | tee tmp.log | jq -s "map(
             {(.namespace + \".\" + .chart.metadata.name): { \
                 first_deployed: .info.first_deployed, \
                 last_deployed: .info.last_deployed, \
                 chart_version: .chart.metadata.version, \
-                app_version: .chart.metadata.appVersion, \
-                values_image: .chart.values.image}}) | add"
+                app_version: .chart.metadata.appVersion}}) | add"
     else
         echo '"ERROR: jq(1) missing"'
     fi
