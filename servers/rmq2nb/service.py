@@ -138,12 +138,16 @@ class NetboxRequest:
             fqdn.replace('-', '.'),  # host.with.dash.in.name
         ])
         for q in search_params:
-            obj = self.get_by_params(
-                klass.url, {'q': q, 'status': ('active', 'planned', 'staged')},
-                klass)
-            if (obj is not None
-                    and obj.obj['custom_fields']['gocollect_id'] is None):
-                return obj
+            # Name is an exact search, q is a contains search but also searches
+            # the comments of a Resource which can give false positives.
+            for param in ('name', 'q'):
+                obj = self.get_by_params(
+                    klass.url, {
+                        param: q, 'status': ('active', 'planned', 'staged')},
+                    klass)
+                if (obj is not None
+                        and obj.obj['custom_fields']['gocollect_id'] is None):
+                    return obj
 
 
 class BaseResource:
