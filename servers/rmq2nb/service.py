@@ -386,11 +386,11 @@ class BaseResource:
                     log.info(
                         '%s renamed interface %s to %s', self, name, new_name)
                 interfaces[new_name] = iface
-            elif iface.get('cable') or iface.get('connected_endpoint'):
+            elif iface.get('cable') or iface.get('connected_endpoints'):
                 log.warning(
                     'Preserving %s interface %s because it is connected '
-                    'with cable %r to endpoint %r', self, iface['display'],
-                    iface['cable'], iface['connected_endpoint'])
+                    'with cable %r to endpoints %r', self, iface['display'],
+                    iface['cable'], iface['connected_endpoints'])
             elif dry_run:
                 log.info(
                     'Would remove %s interface %s', self, iface['display'])
