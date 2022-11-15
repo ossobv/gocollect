@@ -37,6 +37,11 @@ And install prerequisites::
 
     go get github.com/ossobv/go-getopt
 
+Possibly set env to old style module handling::
+
+    # go.mod file not found in current directory or any parent directory...
+    go env -w GO111MODULE=off  # sets ~/.config/go/env: GO111MODULE=off
+
 
 Packaging for Debian
 --------------------
