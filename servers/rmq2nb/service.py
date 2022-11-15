@@ -138,12 +138,15 @@ class NetboxRequest:
             fqdn.replace('-', '.'),  # host.with.dash.in.name
         ])
         for q in search_params:
-            obj = self.get_by_params(
-                klass.url, {'q': q, 'status': ('active', 'planned', 'staged')},
-                klass)
-            if (obj is not None
-                    and obj.obj['custom_fields']['gocollect_id'] is None):
-                return obj
+            # Search case insensitive for exact match and contains.
+            for param in ('name__ie', 'name__ic'):
+                obj = self.get_by_params(
+                    klass.url, {
+                        param: q, 'status': ('active', 'planned', 'staged')},
+                    klass)
+                if (obj is not None
+                        and obj.obj['custom_fields']['gocollect_id'] is None):
+                    return obj
 
 
 class BaseResource:
@@ -386,11 +389,11 @@ class BaseResource:
                     log.info(
                         '%s renamed interface %s to %s', self, name, new_name)
                 interfaces[new_name] = iface
-            elif iface.get('cable') or iface.get('connected_endpoint'):
+            elif iface.get('cable') or iface.get('connected_endpoints'):
                 log.warning(
                     'Preserving %s interface %s because it is connected '
-                    'with cable %r to endpoint %r', self, iface['display'],
-                    iface['cable'], iface['connected_endpoint'])
+                    'with cable %r to endpoints %r', self, iface['display'],
+                    iface['cable'], iface['connected_endpoints'])
             elif dry_run:
                 log.info(
                     'Would remove %s interface %s', self, iface['display'])

@@ -267,8 +267,9 @@ func main() {
 	// Use signals to sleep in the main thread.
 	sigHandler := signal.NewAlarmHupUsr1()
 
-	// Do the work.
-	os.Chdir("/")
+	// Do the work in /tmp. In case sub applications want to write cache
+	// files or similar.
+	os.Chdir("/tmp")
 
 	// Single test key.
 	if testKey, ok := options["test-key"]; ok {

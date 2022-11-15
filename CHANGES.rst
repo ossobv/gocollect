@@ -1,6 +1,13 @@
 Changes
 -------
 
+* v0.8.11 [2022-11-15]:
+
+  - app.containerd: First containerd image scraper.
+  - app.k8s: Speed fix.
+  - main: Fix so subprocesses/collectors can write files in CWD by
+    running in /tmp.
+
 * v0.8.10 [2022-09-19]:
 
   - app.k8s: Minor fixes for use on various systems
