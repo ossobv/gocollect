@@ -1,0 +1,63 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: sed(sed)
+set -u
+
+S='[^[:blank:]]'
+s='[[:blank:]]'
+Sp="$S\\+"
+sp="$s\\+"
+cSp="\\($Sp\\)"
+cSpw="$cSp$sp"
+
+n=0
+printf '{"cron": [\n'
+find /etc/crontab /etc/cron.d /var/spool/cron/crontabs -type f |
+        while read f; do
+    if test "${f#/var/spool/cron/crontabs/}" != "$f"; then
+        username=${f#/var/spool/cron/crontabs/}
+        username=${username%%/*}
+        username=${username%%\"*}  # no double quotes please
+        username=${username%%\\*}  # no backslashes please
+        # user cron, without username
+        sed -ne '
+            # Remove leading/trailing space
+            s@^'"$sp"'@@
+            s@'"$sp"'$@@
+
+            # Drop empty lines, comments and var assignments
+            /^$/d;/^#/d;/^[^[:blank:]]*=/d
+
+            # Remove backslash, so we can use it to escape
+            s@\\@@g
+            s@"@\"@g
+
+            # M H dom m dow command
+            s@'"$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"'"$username\",\
+"'"command":"\6","M":"\1","H":"\2","dom":"\3","m":"\4","dow":"\5"}@p
+        ' "$f"
+    else
+        # system cron, with username
+        sed -ne '
+            # Remove leading/trailing space
+            s@^'"$sp"'@@
+            s@'"$sp"'$@@
+
+            # Drop empty lines, comments and var assignments
+            /^$/d;/^#/d;/^[^[:blank:]]*=/d
+
+            # Remove backslash, so we can use it to escape
+            s@\\@@g
+            s@"@\"@g
+
+            # M H dom m dow user command
+            s@'"$cSpw$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"\6",'"\
+"'"command":"\7","M":"\1","H":"\2","dom":"\3","m":"\4","dow":"\5"}@p
+        ' "$f"
+    fi
+done | LC_ALL=C sort | while read -r line; do
+    if test "$n" -gt 0; then printf ',\n'; fi
+    printf '  %s' "$line"
+    n=$((n+1))
+done
+printf '\n]}\n'
