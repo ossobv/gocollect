@@ -6,6 +6,10 @@
 # REQUIRES: kmod(modprobe) | module-init-tools(modprobe)
 # REQUIRES: sed(sed)
 
+# Changes:
+# 2022-11-15: drop Gateway MAC from listing, because it keeps
+#             oscillating between 00:00:00 and the real value.
+
 
 if ! which ipmitool >/dev/null 2>&1; then
     echo "error: This script requires ipmitool." >&2
@@ -21,6 +25,7 @@ devs=`find /dev -name 'ipmi*' 2>/dev/null | wc -l`
 if test $devs -gt 0; then
     ipmitool lan print | sed -re '
             /^ /d
+            /^(Default|Backup) Gateway MAC *:/d
             s/^([^:]*[^: ]+) *: (.*[^ ]+) *$/"\1":"\2",/' |
             sed -e '1s/^/{/;$s/,$/}/'
 else

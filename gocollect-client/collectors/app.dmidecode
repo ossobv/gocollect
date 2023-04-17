@@ -15,6 +15,7 @@ END {
 }
 {
     gsub("\"", "")
+    gsub("\t", "  ")  # "Specification Version: 2.0\tFirmware Revision: 73.4"
     arraylen = split($0, array, "\n")
     key = array[1]
     key = lstrip(key)  # bug in dmidecode 2.11-9 has TAB before handle 0x1C

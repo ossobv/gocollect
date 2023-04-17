@@ -1,6 +1,12 @@
 Changes
 -------
 
+* v0.8.12 [2023-04-17]:
+
+  - app.cron: Fetch crontab/systemd timer info.
+  - app.dmidecode: Fix TAB found in some implementations
+  - sys.ipmi: Reduce changes
+
 * v0.8.11 [2022-11-15]:
 
   - app.containerd: First containerd image scraper.
