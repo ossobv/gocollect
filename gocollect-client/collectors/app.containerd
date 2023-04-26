@@ -32,7 +32,7 @@ list_containers() {
         for c in $(ctr -n $ns container ls --quiet); do
             ctr -n $ns container info $c
         done
-    done | sed -ne 's/^[[:blank:]]*"Image":[[:blank:]]*\("[^"]*"\).*/\1/p' |
+    done | sed -ne 's/^[[:blank:]]*"Image":[[:blank:]]*\("[^"]\+"\).*/\1/p' |
         LC_ALL=C sort -u | awk '
         BEGIN{print "["} {if(NR>1)printf ",";print $0} END{print "]"}'
 }
