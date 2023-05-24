@@ -30,7 +30,7 @@ find /etc/crontab /etc/cron.d /var/spool/cron/crontabs -type f 2>/dev/null |
 
             # Remove backslash, so we can use it to escape
             s@\\@@g
-            s@"@\"@g
+            s@"@\\"@g
 
             # M H dom m dow command
             s@'"$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"'"$username\",\
@@ -48,7 +48,7 @@ find /etc/crontab /etc/cron.d /var/spool/cron/crontabs -type f 2>/dev/null |
 
             # Remove backslash, so we can use it to escape
             s@\\@@g
-            s@"@\"@g
+            s@"@\\"@g
 
             # M H dom m dow user command
             s@'"$cSpw$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"\6",'"\
