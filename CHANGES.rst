@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.8.13 [2023-05-31]:
+
+  - app.cron: Properly handle double quotes in cron definitions.
+  - app.containerd: Skip empty names.
+
 * v0.8.12 [2023-04-17]:
 
   - app.cron: Fetch crontab/systemd timer info.
