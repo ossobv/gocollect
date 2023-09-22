@@ -454,7 +454,8 @@ class BaseResource:
             # Always include hardware interfaces.
             return True
         elif iface['name'].startswith((
-                'br-', 'cali', 'docker', 'fl', 'fw', 'kube-', 'vxlan.calico')):
+                'br-', 'cali', 'cilium', 'docker', 'fl', 'fw', 'kube-',
+                'vxlan.calico')):
             # Blacklist local interfaces.
             return False
         elif iface['mac_address'] in ('ee:ee:ee:ee:ee:ee', '0.0.0.0'):
