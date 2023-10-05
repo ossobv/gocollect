@@ -283,6 +283,8 @@ func main() {
 
 	// Do complete run.
 	os.Stdout.Close()
+	var interval int
+	last_success := true
 	for {
 		ret := collectRunner.Run()
 		if oneShot {
@@ -292,7 +294,24 @@ func main() {
 			return
 		}
 
-		signal.Alarm(4 * 3600)
+		if ret {
+			// All good, run again in 4 hours
+			interval = 4 * 3600
+			last_success = true
+		} else if last_success {
+			// Retry in 5 minutes if this is the first run
+			interval = 300
+			last_success = false
+		} else {
+			// Keep retrying in larger intervals
+			interval *= 2
+			if interval > (4 * 3600) {
+				// Until we're at max
+				interval = 4 * 3600
+			}
+		}
+
+		signal.Alarm(interval)
 		sig := <-sigHandler.Chan // wait for SIGALRM or SIGHUP or SIGUSR1
 		if sig.String() != "alarm clock" {
 			signal.Alarm(0)

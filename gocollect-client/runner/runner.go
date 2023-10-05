@@ -37,7 +37,9 @@ func (r *Runner) Run() bool {
 	}
 
 	// Then run all collectors.
-	runner.runAll()
+	if (runner.runAll() != runSuccess) {
+		return false
+	}
 	return true
 }
 
