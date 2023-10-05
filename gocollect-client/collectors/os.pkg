@@ -85,9 +85,8 @@ function versionasnumlist(version,   array, arraylen, idx) {
 echo '}'
 
 echo ',"repositories":['
-LC_ALL=C sort `
-    find /etc/apt/sources.list /etc/apt/sources.list.d \
-        -name '*.list' -o -name '*.sources'` |
+LC_ALL=C sort $(find /etc/apt/sources.list /etc/apt/sources.list.d \
+        -name '*.list' -o -name '*.sources') |
     sed -e '/^deb /!d;s/^/"/;s/$/",/' |
     sed -e '$s/,$/]}/'
 

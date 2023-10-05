@@ -1,8 +1,8 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only, optional
-# REQUIRES: lldpctl(lldpd)
-# REQUIRES: printf(coreutils)
+# REQUIRES: lldptd(lldpctl)
+# REQUIRES: coreutils(printf)
 # REQUIRES: sed(sed)
 
 # Using json0 because it is "easier to parse" than json. Both have arrays,

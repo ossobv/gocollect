@@ -1,8 +1,9 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: optional
-# REQUIRES: ctr(containerd)
 # REQUIRES: awk(awk)
+# REQUIRES: containerd(ctr)
+# NOTE: Remember to test changes with mawk(1).
 
 # If there is no ctr (for containerd), or it returns failure, return "{}".
 if ! command -v ctr >/dev/null; then

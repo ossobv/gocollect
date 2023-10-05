@@ -1,7 +1,6 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only
-# REQUIRES: debianutils(which)
 # REQUIRES: ipmitool(ipmitool)
 # REQUIRES: kmod(modprobe) | module-init-tools(modprobe)
 # REQUIRES: sed(sed)
@@ -10,18 +9,16 @@
 # 2022-11-15: drop Gateway MAC from listing, because it keeps
 #             oscillating between 00:00:00 and the real value.
 
-
-if ! which ipmitool >/dev/null 2>&1; then
+if ! command -v ipmitool >/dev/null 2>&1; then
     echo "error: This script requires ipmitool." >&2
     exit 1
 fi
-
 
 modprobe ipmi_msghandler
 modprobe ipmi_devintf
 modprobe ipmi_si
 
-devs=`find /dev -name 'ipmi*' 2>/dev/null | wc -l`
+devs=$(find /dev -name 'ipmi*' 2>/dev/null | wc -l)
 if test $devs -gt 0; then
     ipmitool lan print | sed -re '
             /^ /d

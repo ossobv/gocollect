@@ -45,7 +45,7 @@ if test -r "$OSREL"; then
     fi
     comment=$(sed -e '/^PRETTY_NAME=/!d;s/^[^=]*=//;s/"//g' "$OSREL")
 
-elif which lsb_release >/dev/null; then
+elif command -v lsb_release >/dev/null; then
     output=$(lsb_release -a 2>/dev/null)
     name=$(echo "$output" |
            sed -e '/^Distributor ID/!d;s/^[^:]*:[[:blank:]]*//')
@@ -60,7 +60,7 @@ elif which lsb_release >/dev/null; then
     comment=$(echo "$output" |
               sed -e '/^Description/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
 
-elif which apt-cache >/dev/null; then
+elif command -v apt-cache >/dev/null; then
     # Ancient Debians without lsb_release.
     id=$(apt-cache policy dpkg |
          sed -e '/http:\/\//!d;s#.*http://[^ ]*/\([^/]\+\)/\?  *.*#\1#' |
