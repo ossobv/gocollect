@@ -1,6 +1,7 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
-# REQUIRES: coreutils(printf uname)
+# REQUIRES: coreutils(base64 printf uname)
+# REQUIRES: kmod(lsmod) | module-init-tools(lsmod)
 # REQUIRES: sed(sed)
 
 name=$(uname --kernel-name)
@@ -8,6 +9,7 @@ version=$(uname --kernel-release)
 number=$(echo "$version" |
          sed -e 's/^\([0-9]\+\(\.[0-9]\+\)*\).*/\1/;s/\./,/g
                  s/\([^0-9]\)0\+\([0-9]\)/\1\2/g')
+
 printf '{"name":"%s","number":[%s],"version":"%s","modules":{"loaded":[' \
     "$name" "$number" "$version"
 lsmod 2>/dev/null | sed -e1d | sort -V | awk '

@@ -5,6 +5,8 @@
 SECUREBOOT_EFIVAR=\
 /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
 
+has_efi=true; test -d /sys/firmware/efi || has_efi=false
+
 get_secureboot() {
     # bootctl status | grep 'Secure Boot:'
     local secureboot="$(cat -v "$SECUREBOOT_EFIVAR" 2>/dev/null)"
@@ -24,4 +26,4 @@ get_secureboot() {
     esac
 }
 
-echo "{\"efi\":{\"secureboot\": \"$(get_secureboot)\"}}"
+echo "{\"efi\":{\"enabled\":$has_efi,\"secureboot\":\"$(get_secureboot)\"}}"
