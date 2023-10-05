@@ -1,6 +1,7 @@
 # vim: set syn=systemd:
 [Unit]
 Description=GoCollect, the rarely changing sysinfo collector
+After=network-online.target
 
 [Service]
 ExecStart=/usr/sbin/gocollect
