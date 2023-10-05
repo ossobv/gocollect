@@ -1,0 +1,13 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: hardware-only
+# REQUIRES: fwupd(fwupdmgr)
+# REQUIRES: kmod(modprobe) | module-init-tools(modprobe)
+# REQUIRES: sed(sed)
+
+if ! command -v fwupdmgr >/dev/null; then
+    echo "error: This script requires fwupdmgr" >&2
+    exit 1
+fi
+
+exec fwupdmgr --json get-devices 2>/dev/null
