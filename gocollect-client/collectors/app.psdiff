@@ -1,6 +1,8 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: awk(awk)
+# NOTE: Remember to test changes with mawk(1).
+
 test -f /var/lib/psdiff.db && exec awk '
   BEGIN{print "{\"psdiff.db\":{\"filelines\":["}
   {gsub("\\\"","");gsub("\\\\","");if(NR>1)printf ",";print "\"" $0 "\"" }

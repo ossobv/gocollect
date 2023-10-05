@@ -3,19 +3,16 @@
 # LABELS: hardware-only
 # REQUIRES: awk(awk)
 # REQUIRES: coreutils(printf sort tr)
-# REQUIRES: debianutils(which)
 # REQUIRES: sed(sed)
 # REQUIRES: util-linux(lsblk)
 # OPTIONAL: nvme-cli(nvme)
 # OPTIONAL: smartmontools(smartctl)
 
-
-if ! which smartctl >/dev/null 2>&1 && ! which nvme >/dev/null 2>&1; then
+if ! command -v smartctl >/dev/null && ! command -v nvme >/dev/null; then
     echo "error: This script requires smartctl/nvme. See smartmontools" >&2
     echo "error: and/or nvme-cli" >&2
     exit 1
 fi
-
 
 # First, run a scan to find all smart devices (regular and raid) and append
 # lsblk devices to that (so we get NVMe devices as well).
@@ -40,7 +37,7 @@ devices=$( (
 
 device_n=0
 printf '['
-if which smartctl >/dev/null 2>&1; then
+if command -v smartctl >/dev/null; then
     echo "$devices" | while read line; do
         # Add -T verypermissive because we don't care if "mandatory" smart
         # commands don't work.

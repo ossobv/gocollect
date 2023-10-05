@@ -1,11 +1,12 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: optional
-# REQUIRES: docker(docker.io)
 # REQUIRES: awk(awk)
+# REQUIRES: docker(docker.io)
+# NOTE: Remember to test changes with mawk(1).
 
 # If there is no docker, or it returns failure, return "{}".
-if ! which docker >/dev/null; then
+if ! command -v docker >/dev/null; then
     echo '{}'
     exit 0
 fi

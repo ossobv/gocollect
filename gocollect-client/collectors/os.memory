@@ -3,6 +3,6 @@
 # REQUIRES: procps(free)
 # REQUIRES: sed(sed)
 
-memory=`free -m | sed -e '/^Mem:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//'`
-swap=`free -m | sed -e '/^Swap:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//'`
+memory=$(free -m|sed -e '/^Mem:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//')
+swap=$(free -m|sed -e '/^Swap:/!d;s/^[^:]*:[[:blank:]]*//;s/[[:blank:]].*//')
 echo "{\"memory\":$memory,\"swap\":$swap,\"unit\":\"MB\"}"

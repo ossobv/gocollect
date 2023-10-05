@@ -20,6 +20,14 @@ type runInfo struct {
 	coreIDData data.Collected
 }
 
+type runStatus int
+
+const (
+	runSuccess runStatus = iota
+	runFailedFirst
+	runFailedSome
+)
+
 func newRunInfo(r *Runner) (ri runInfo) {
 	ri.runner = r
 	ri.collectors = data.MergeCollectors(
@@ -72,7 +80,10 @@ func (ri *runInfo) runRegister() bool {
 	return true
 }
 
-func (ri *runInfo) runAll() {
+func (ri *runInfo) runAll() runStatus {
+	ret := runSuccess
+	collectors := 0
+
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
 	for _, collectorKey := range ri.collectors.GetRunnable() {
@@ -91,9 +102,18 @@ func (ri *runInfo) runAll() {
 
 		if !ri.push(pushURL, collected) {
 			log.Log.Printf("push: aborting early; assuming server is broken")
+			if collectors == 0 {
+				ret = runFailedFirst
+			} else {
+				ret = runFailedSome
+			}
 			break
 		}
+
+		collectors += 1
 	}
+
+	return ret
 }
 
 func (ri *runInfo) runCollector(collectorKey string) data.Collected {

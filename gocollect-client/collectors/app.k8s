@@ -1,7 +1,7 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: kubectl
-# REQUIRES: base64(coreutils) jq(jq) sed(sed) zcat(gzip)
+# REQUIRES: coreutils(base64) jq(jq) sed(sed) gzip(zcat)
 #
 # A.k.a. Gocollecternetes. Fetches resources that are capable of
 # spawning images, and lists them and their images.
@@ -10,7 +10,7 @@
 # /root/.kube/config.
 set -eu
 
-KUBECTL_BIN="$(which kubectl 2>/dev/null | head -n1)"
+KUBECTL_BIN="$(command -v kubectl)"
 RESOURCES='cronjobs.batch daemonsets.apps deployments.apps statefulsets.apps'
 CLUSTER=
 

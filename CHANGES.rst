@@ -1,6 +1,16 @@
 Changes
 -------
 
+* v0.9.0 [2023-10-05]:
+
+  - main: Retry sooner on push errors
+  - rc: Depend on networking before start
+  - collectors: Clean them up a bit
+  - app.cron: Handle @reboot and friends, store them in "attime"
+  - sys.firmware: Add fwupdmgr get-devices listing
+  - os.kernel: Add lsmod
+  - sys.security: Add EFI var status
+
 * v0.8.13 [2023-05-31]:
 
   - app.cron: Properly handle double quotes in cron definitions.

@@ -3,8 +3,7 @@
 # LABELS: optional
 # REQUIRES: ethtool(ethtool)
 
-ethtool=$(which ethtool 2>/dev/null)
-test -z "$ethtool" && exit 0  # no ethtool
+ethtool=$(command -v ethtool) || exit 0  # no ethtool
 
 ethtool_module() {
     local link=$1
