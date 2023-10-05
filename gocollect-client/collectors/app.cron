@@ -32,8 +32,11 @@ find /etc/crontab /etc/cron.d /var/spool/cron/crontabs -type f 2>/dev/null |
             s@\\@@g
             s@"@\\"@g
 
+            # @reboot/whatever command (add space so next one skips)
+            s!^@'"$cSpw"'\(.*\)! {"user":"'"$username\",\
+"'"command":"\2","attime":"\1"}!p
             # M H dom m dow command
-            s@'"$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"'"$username\",\
+            s@^'"$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"'"$username\",\
 "'"command":"\6","M":"\1","H":"\2","dom":"\3","m":"\4","dow":"\5"}@p
         ' "$f"
     else
@@ -50,8 +53,11 @@ find /etc/crontab /etc/cron.d /var/spool/cron/crontabs -type f 2>/dev/null |
             s@\\@@g
             s@"@\\"@g
 
+            # @reboot/whatever user command (add space so next one skips)
+            s!^@'"$cSpw$cSpw"'\(.*\)! {"user":"\2",'"\
+"'"command":"\3","attime":"@\1"}!p
             # M H dom m dow user command
-            s@'"$cSpw$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"\6",'"\
+            s@^'"$cSpw$cSpw$cSpw$cSpw$cSpw$cSpw"'\(.*\)@{"user":"\6",'"\
 "'"command":"\7","M":"\1","H":"\2","dom":"\3","m":"\4","dow":"\5"}@p
         ' "$f"
     fi
