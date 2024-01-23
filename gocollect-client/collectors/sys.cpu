@@ -6,9 +6,9 @@
 
 # lscpu=$(lscpu 2>/dev/null)
 if false && test -n "$lscpu"; then
-    arch=$(echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//')
-    cpus=$(echo "$lscpu" | sed -e '/^CPU(s)[[:blank:]]*:/!d;s/^[^:]*: *//')
-    cores=$(echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//')
+    arch=$(echo "$lscpu" | sed -e '/^Architecture:/!d;s/^[^:]*: *//')
+    cpus=$(echo "$lscpu" | sed -e '/^CPU(s):/!d;s/^[^:]*: *//')
+    cores=$(echo "$lscpu" | sed -e '/^Core(s) per socket:/!d;s/^[^:]*: *//')
     name=$(echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
            tr '\n' ' ' | sed -e 's/ $//')
 else
