@@ -65,11 +65,12 @@ class Collector(DirectoryMixin):
             self.symlink(newfile, self.get_keylink())
 
             # Truncate the amount of history for the app.* keys; keeping
-            # 5 data files. This is important for the app.lshw which is
+            # 40 data files. This is important for the app.lshw which is
             # prone to return slightly different/altered output every
-            # call.
-            if self.collectkey.startswith('app.') and len(allfiles) > 4:
-                for to_remove in allfiles[4:]:
+            # call. (Increased from 4 to 40 to allow for more history
+            # for some app.* items.)
+            if self.collectkey.startswith('app.'):
+                for to_remove in allfiles[40:]:
                     try:
                         os.unlink(os.path.join(datadir, to_remove))
                     except Exception:

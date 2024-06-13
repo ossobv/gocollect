@@ -4,15 +4,15 @@
 # REQUIRES: sed(sed)
 # REQUIRES: util-linux(lscpu)  # optional
 
-lscpu=$(lscpu 2>/dev/null)
-if test -n "$lscpu"; then
-    arch=$(echo "$lscpu" | sed -e '/^Arch/!d;s/^[^:]*: *//')
-    cpus=$(echo "$lscpu" | sed -e '/^CPU(s)/!d;s/^[^:]*: *//')
-    cores=$(echo "$lscpu" | sed -e '/^Core(s)/!d;s/^[^:]*: *//')
+# lscpu=$(lscpu 2>/dev/null)
+if false && test -n "$lscpu"; then
+    arch=$(echo "$lscpu" | sed -e '/^Architecture:/!d;s/^[^:]*: *//')
+    cpus=$(echo "$lscpu" | sed -e '/^CPU(s):/!d;s/^[^:]*: *//')
+    cores=$(echo "$lscpu" | sed -e '/^Core(s) per socket:/!d;s/^[^:]*: *//')
     name=$(echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
            tr '\n' ' ' | sed -e 's/ $//')
 else
-    arch=$(uname -p)
+    arch=$(uname -m)
     cpus=$(sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l)
     cores=$(sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 |
             sed -e 's/.* //')
