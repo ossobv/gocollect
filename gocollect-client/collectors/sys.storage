@@ -6,6 +6,7 @@
 # REQUIRES: sed(sed)
 # REQUIRES: util-linux(lsblk)
 # OPTIONAL: nvme-cli(nvme)
+# OPTIONAL: sedutil-cli(sedutil-cli)
 # OPTIONAL: smartmontools(smartctl)
 
 if ! command -v smartctl >/dev/null && ! command -v nvme >/dev/null; then
@@ -33,6 +34,27 @@ devices=$( (
     lsblk -no TYPE,NAME | sed -e '/^disk/!d;s/[^ ]* */\/dev\//'
 ) | LC_ALL=C sort | uniq_by_prefix | sed -e '/^\/dev\/rbd[0-9]\+$/d')
 # ^- exclude Ceph "RADOS Block Device"
+
+if command -v sedutil-cli >/dev/null; then
+    sed_status() {
+        local ret
+        if ret=$(sedutil-cli --query "$1" 2>/dev/null); then
+            ret=$(printf '%s' "$ret" | sed -ne '/^    Locked/{
+                s/.*LockingEnabled = Y, LockingSupported = Y.*/LOCKED/p
+                s/.*LockingEnabled = N, LockingSupported = Y.*/NOT_LOCKED/p
+                s/.*LockingSupported = N.*/NOT_SUPPORTED/p
+                q
+            }')
+            echo "${ret:-UNEXPECTED}"
+        else
+            echo NOT_VALIDSED
+        fi
+    }
+else
+    sed_status() {
+        echo NO_SEDUTIL
+    }
+fi
 
 
 device_n=0
@@ -79,9 +101,12 @@ if command -v smartctl >/dev/null; then
                     s/^[^:]*:.*[[:blank:]]\([0-9]\+\) bytes.*/\1/' | head -n1)
             serial=$(echo "$smartctl" | sed -e '
                 /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
-            printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+            sedstatus=$(sed_status "$line")
+            printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s",'"\
+"'"%s":"%s"}\n' \
                 "$comma" logicalname "$dev" product "$product" \
-                serial "$serial" size "$bytes" sectorsize "$sectorsize"
+                serial "$serial" size "$bytes" sectorsize "$sectorsize" \
+                sedstatus "$sedstatus"
         else
             echo "warning: failed to read $line" >&2
         fi
@@ -105,9 +130,12 @@ else
             /"'"$escdev"'"/,/}/{/PhysicalSize/{s/.* : //;s/,//;p}}')
         sectorsize=$(echo "$nvme_json" | sed -ne '
             /"'"$escdev"'"/,/}/{/SectorSize/{s/.* : //;s/,//;p}}')
-        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s"}\n' \
+        sedstatus=$(sed_status "$line")
+        printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s",'"\
+"'"%s":"%s"}\n' \
             "$comma" logicalname "$dev" product "$product" \
-            serial "$serial" size "$bytes" sectorsize "$sectorsize"
+            serial "$serial" size "$bytes" sectorsize "$sectorsize" \
+            sedstatus "$sedstatus"
     done
 fi
 printf ']\n'
