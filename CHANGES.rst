@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.9.1 [2024-06-13]:
+
+    sys.cpu: Do not use lscpu; proc/cpuinfo is fine
+    sys.storage: Quickly add SED/OPAL status
+
 * v0.9.0 [2023-10-05]:
 
   - main: Retry sooner on push errors
