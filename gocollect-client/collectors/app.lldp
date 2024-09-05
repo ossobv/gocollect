@@ -1,7 +1,7 @@
 #!/bin/sh
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only, optional
-# REQUIRES: lldptd(lldpctl)
+# REQUIRES: lldpd(lldpcli)
 # REQUIRES: coreutils(printf)
 # REQUIRES: sed(sed)
 
@@ -16,7 +16,7 @@
 #     map({"name": .name, "chassis": .chassis[0].name[0].value,
 #          "port": .port[0].id[0].value})'
 #
-default_output=$(lldpctl -f json0 2>/dev/null)
+default_output=$(lldpcli show neighbors details -f json0 2>/dev/null)
 ret=$?
 
 if test $ret -eq 127; then
@@ -25,11 +25,11 @@ if test $ret -eq 127; then
 fi
 
 if test $ret -ne 0 || test -z "$default_output"; then
-    echo "ERROR: lldpctl returned $ret; $default_output" >&2
+    echo "ERROR: lldpcli returned $ret; $default_output" >&2
     exit 1
 fi
 
 # Use printf because echo may expand the existing \n's to real
 # linefeeds, breaking the gocollect JS parser.
-printf '{"lldpctl.default":\n%s\n}\n' "$default_output" |
+printf '{"lldpcli.neighbors":\n%s\n}\n' "$default_output" |
     sed -e 's/"age": *"[^"]*" *,\?//g' # drop changing age
