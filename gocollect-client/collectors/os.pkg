@@ -85,10 +85,23 @@ function versionasnumlist(version,   array, arraylen, idx) {
 echo '}'
 
 echo ',"repositories":['
-LC_ALL=C sort $(find /etc/apt/sources.list /etc/apt/sources.list.d \
-        -name '*.list' -o -name '*.sources') |
-    sed -e '/^deb /!d;s/^/"/;s/$/",/' |
-    sed -e '$s/,$/]}/'
+{
+    # Extract all ^deb from sources.list
+    LC_ALL=C sort </dev/null $(
+        find /etc/apt/sources.list /etc/apt/sources.list.d \
+            '!' -type d '(' -name '*.list' -o -name '*.sources' ')') |
+        sed -e '/^deb /!d;s/^/"/;s/$/",/';
+    # Extract all deb822 style "Target:...URIs:...."
+    for fn in $(find /etc/apt/sources.list /etc/apt/sources.list.d \
+                '!' -type d '(' -name '*.list' -o -name '*.sources' ')'); do
+        sed -e '/^deb /d;/^deb-src /d;/^[[:blank:]]*#/d;s/^Types:/|&/g' "$fn" |
+            mawk -vRS='|' '{
+                gsub(/^(\n\s*)+|[\n\s]+$/, "");
+                gsub(/\n/, "\\n");
+                if($0){print "\"" $0 "\","}}'
+        done | LC_ALL=C sort;
+} | sed -e '$s/,$//'
+echo -n ']}'
 
 # End the lockf.py madness
 exit 64

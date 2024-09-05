@@ -20,7 +20,7 @@ index_re = re.compile('^/[a-z][a-z-+_]*')
 class Storage(object):
     ignore_keys = [
         'app.dmidecode',  # Messy output.
-        'app.lldpctl',    # Unknown.
+        'app.lldp',       # Unknown.
         'app.lshw',       # Cannot get nested mapping to work.
         'app.ps-kvmex1',  # Bad output, values as dict keys.
         'app.vzlist',     # Unknown.
