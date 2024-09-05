@@ -94,11 +94,10 @@ echo ',"repositories":['
     # Extract all deb822 style "Target:...URIs:...."
     for fn in $(find /etc/apt/sources.list /etc/apt/sources.list.d \
                 '!' -type d '(' -name '*.list' -o -name '*.sources' ')'); do
-        sed -e '/^deb /d;/^deb-src /d;/^[[:blank:]]*#/d;s/^Types:/|&/g' "$fn" |
-            mawk -vRS='|' '{
-                gsub(/^(\n\s*)+|[\n\s]+$/, "");
-                gsub(/\n/, "\\n");
-                if($0){print "\"" $0 "\","}}'
+        sed -e '/^deb /d;/^deb-src /d;/^[[:blank:]]*#/d;s/\r//g;1i
+' "$fn" | tr '\n' '\r' |
+            sed -e 's/\r\r\+/\n/g;s/^\r*//;s/\r*$/\n/;s/\r/\\n/g' |
+            sed -e '/^$/d;s/.*/"&",/g'
         done | LC_ALL=C sort;
 } | sed -e '$s/,$//'
 echo -n ']}'
