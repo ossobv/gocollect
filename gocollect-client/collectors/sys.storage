@@ -112,25 +112,30 @@ if command -v smartctl >/dev/null; then
         fi
     done
 else
-    nvme_all=$(nvme list)
+    nvme_all=$(nvme list | sed -e1,2d)
     nvme_json=$(nvme list -o json)
-    echo "$devices" | while read dev; do
+    echo "$nvme_all" | while read dev rest; do
         comma=
         test $device_n -gt 0 && comma=,
         device_n=$((device_n + 1))
 
         nvme_line=$(echo "$nvme_all" | awk "{if(\$1==\"$dev\")print}")
-        product=$(echo "$nvme_line" | awk -F'   *' '{print $3}')
         serial=$(echo "$nvme_line" | awk -F'   *' '{print $2}')
+        if test "${serial#/}" != "$serial"; then
+            serial=$(echo "$nvme_line" | awk -F'   *' '{print $3}')
+            product=$(echo "$nvme_line" | awk -F'   *' '{print $4}')
+        else
+            product=$(echo "$nvme_line" | awk -F'   *' '{print $3}')
+        fi
         #bytes=$(echo "$nvme_line" | awk -F'   *' '{print $5}')
         #bytes_unit=$(echo "$nvme_line" | awk -F'   *' '{print $6}')
         #bytes_unit=${bytes_unit%% *}  # "TB / blah.." -> "TB"
         escdev=$(echo "$dev" | sed -e 's#/#\\/#g')
         bytes=$(echo "$nvme_json" | sed -ne '
-            /"'"$escdev"'"/,/}/{/PhysicalSize/{s/.* : //;s/,//;p}}')
+            /"'"$escdev"'"/,/}/{/PhysicalSize/{s/^[^:]*: *//;s/,//;p}}')
         sectorsize=$(echo "$nvme_json" | sed -ne '
-            /"'"$escdev"'"/,/}/{/SectorSize/{s/.* : //;s/,//;p}}')
-        sedstatus=$(sed_status "$line")
+            /"'"$escdev"'"/,/}/{/SectorSize/{s/^[^:]*: *//;s/,//;p}}')
+        sedstatus=$(sed_status "$dev")
         printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s",'"\
 "'"%s":"%s"}\n' \
             "$comma" logicalname "$dev" product "$product" \
