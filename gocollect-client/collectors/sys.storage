@@ -15,6 +15,127 @@ if ! command -v smartctl >/dev/null && ! command -v nvme >/dev/null; then
     exit 1
 fi
 
+# <----------------------------------------------------------------------------
+# BEGIN VENDORED https://github.com/ossobv/vcutil/blob/develop/whatsmyboot
+# <----------------------------------------------------------------------------
+
+_pathboots() {
+    local path
+    path="$1"
+    local dev type partitions
+    partitions=$(\
+        df -l --output=source,fstype "$path" | sed -e1d |
+        while read dev type; do
+            if test "$dev" != "${dev#/}"; then
+                echo "$dev"
+            elif test "$type" = "zfs"; then
+                zpool status -LP "${dev%%/*}" |
+                    awk 'substr($1,1,5)=="/dev/"{print $1}'
+            else
+                echo "$0: Not implemented: $dev $type" >&2
+                exit 1
+            fi
+        done
+    )
+    if test -n "$partitions"; then
+        echo "$partitions"
+    else
+        echo "$0: No BIOS partitions?" >&2
+        exit 1
+    fi
+}
+
+biosboots() {
+    _pathboots /boot
+}
+
+efiboots() {
+    local efiout
+    if efiout=$(efibootmgr -v 2>/dev/null) && test -n "$efiout"; then
+        local partitions
+        partitions=$(printf '%s\n' "$efiout" | awk '
+            /^BootOrder:/{split($2,boots,",")}
+            /^Boot[0-9].*HD[(][0-9]*,GPT,/{
+              idx=substr($1,5,4);gsub("^.*HD[(][0-9]*,GPT,","");gsub(",.*","");
+              bs[idx]=$0}
+            END{for(bidx in boots){if(bs[boots[bidx]])print bs[boots[bidx]]}}
+        ' | xargs -IX blkid -o device --match-token=PARTUUID=X | uniq)
+        if test -z "$partitions"; then
+            echo "$0: EFI, but no boot partitions found?" >&2
+            exit 1
+        fi
+        echo "$partitions"
+    elif test -d /sys/firmware/efi; then
+        echo "$0: EFI directory found, but efibootmgr failed?" >&2
+        exit 1
+    fi
+}
+
+boot_partitions() {
+    local out
+    out=$(efiboots)
+    if test -n "$out"; then
+        echo "$out"
+    else
+        biosboots
+    fi
+}
+
+root_partitions() {
+    _pathboots /
+}
+
+partitions_to_devices() {
+    # awk '
+    # /^\/dev\/nvme/{
+    #   gsub("p[0-9]+$", "");if(!($0 in uniq))print $0;uniq[$0]=1}
+    # /^\/dev\/sd[a-z]/{
+    #   gsub("[0-9]+$", "");if(!($0 in uniq))print $0;uniq[$0]=1}
+    # !/^\/dev\/(nvme|sd[a-z])/{if(!($0 in uniq))print $0;uniq[$0]=1}
+    # '
+    local partition tmp dev dirname
+    while read partition; do
+        tmp=$(udevadm info --query=property --name="$partition" |
+            grep ^DEVPATH=)
+        if test -z "$tmp"; then
+            echo "udevadm fail on $partition" >&2
+            exit 1
+        fi
+        tmp=${tmp%/*}
+        dev=${tmp##*/}
+
+        # Is this mdadm? Then we have to translate some more.
+        if test "$dev" != "${dev#md}"; then
+            grep "^$dev[[:blank:]]" /proc/mdstat | tr ' ' '\n' |
+               sed -e '/[[]/!d;s/[[].*//;s@^@/dev/@' |
+               partitions_to_devices
+        # Is this nvme? Then strip the namespace.
+        elif test "$dev" != "${dev#nvme}"; then
+# BEWARE: This bit is modified for the vendored version. We want the root/boot
+# status on the namespace. That's where the sedstatus is.
+            echo "/dev/$dev"  # nvme namespace
+# ^^^
+            tmp=${tmp%/*}
+            dev=${tmp##*/}
+            echo "/dev/$dev"
+        else
+            echo "/dev/$dev"
+        fi
+    done | awk '{if(!($0 in uniq)){print;uniq[$0]=1}}'
+}
+
+boot_devices() {
+    boot_partitions | partitions_to_devices
+}
+
+root_devices() {
+    root_partitions | partitions_to_devices
+}
+
+# <----------------------------------------------------------------------------
+# END VENDORED https://github.com/ossobv/vcutil/blob/develop/whatsmyboot
+# <----------------------------------------------------------------------------
+
 # First, run a scan to find all smart devices (regular and raid) and append
 # lsblk devices to that (so we get NVMe devices as well).
 uniq_by_prefix() {
@@ -56,6 +177,21 @@ else
     }
 fi
 
+BOOTS=$(boot_devices)
+ROOTS=$(root_devices)
+
+is_in_list() {
+    local dev item
+    dev="$1"
+    shift
+    for item in "$@"; do
+        if test "$dev" = "$item"; then
+            echo true
+            return
+        fi
+    done
+    echo false
+}
 
 device_n=0
 printf '['
@@ -103,10 +239,12 @@ if command -v smartctl >/dev/null; then
                 /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
             sedstatus=$(sed_status "$line")
             printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s",'"\
-"'"%s":"%s"}\n' \
+"'"%s":"%s","%s":%s,"%s":%s}\n' \
                 "$comma" logicalname "$dev" product "$product" \
                 serial "$serial" size "$bytes" sectorsize "$sectorsize" \
-                sedstatus "$sedstatus"
+                sedstatus "$sedstatus" \
+                has_boot $(is_in_list "$dev" $BOOTS) \
+                has_rootfs $(is_in_list "$dev" $ROOTS)
         else
             echo "warning: failed to read $line" >&2
         fi
@@ -137,10 +275,12 @@ else
             /"'"$escdev"'"/,/}/{/SectorSize/{s/^[^:]*: *//;s/,//;p}}')
         sedstatus=$(sed_status "$dev")
         printf '%s{"%s":"%s","%s":"%s","%s":"%s","%s":"%s","%s":"%s",'"\
-"'"%s":"%s"}\n' \
+"'"%s":"%s","%s":%s,"%s":%s}\n' \
             "$comma" logicalname "$dev" product "$product" \
             serial "$serial" size "$bytes" sectorsize "$sectorsize" \
             sedstatus "$sedstatus"
+            has_boot $(is_in_list "$dev" $BOOTS) \
+            has_rootfs $(is_in_list "$dev" $ROOTS)
     done
 fi
 printf ']\n'
