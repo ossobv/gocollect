@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.9.3 [2024-10-30]:
+
+    os.pkg: Fixes on Noble for the new sources.list format
+    sys.storage: Work on Noble. Add has_boot and has_rootfs booleans
+
 * v0.9.2 [2024-09-05]:
 
     app.lldp: Renamed from app.lldpctl and using lldpcli now
