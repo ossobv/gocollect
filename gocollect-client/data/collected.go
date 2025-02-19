@@ -7,8 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"strings"
 	"unicode/utf8"
+
+	"golang.org/x/term" // seriously? no simply isatty() in stdlib?
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
 )
@@ -43,8 +46,11 @@ type collected struct {
 
 // NewCollected creates a new Collected object from the supplied bytes.
 func NewCollected(data []byte) (Collected, error) {
-	// Warn about periods in keys.
-	warnAboutProblematicKeys(data)
+	// Warn about periods in keys. But they seem to be legal in some
+	// collectors. Only warn if stderr is a tty.
+	if (isStderrTTY()) {
+		warnAboutProblematicKeys(data)
+	}
 
 	// Compact the data and validate it at the same time.
 	compacted := new(bytes.Buffer)
@@ -209,7 +215,7 @@ func hasProblematicKeys(obj any) bool {
 			if strings.ContainsRune(key, '.') ||
 					strings.ContainsRune(key, 0) ||
 					strings.HasPrefix(key, "$") {
-				log.Log.Printf("found problematic key: %s", key)
+				log.Log.Printf("possibly problematic key: %s", key)
 				return true
 			}
 			if hasProblematicKeys(val) { // Recursively check nested maps
@@ -224,4 +230,8 @@ func hasProblematicKeys(obj any) bool {
 		}
 	}
 	return false
+}
+
+func isStderrTTY() bool {
+	return term.IsTerminal(int(os.Stderr.Fd()))
 }
