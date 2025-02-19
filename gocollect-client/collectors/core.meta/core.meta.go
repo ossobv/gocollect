@@ -60,20 +60,7 @@ func collectEtcGocollectCoreMetaStarYaml() (data.Collected, error) {
 		return nil, err
 	}
 
-	// Past this point, we'll want to know that something was wrong.
-	outDict := make(map[string]interface{})
-
-	for key, yamlBytes := range yamlData {
-		var yamlObj interface{}
-		err := yaml.Unmarshal(yamlBytes, &yamlObj)
-		if err != nil {
-			log.Log.Printf("collector[core.meta]: yaml: %s", err)
-		} else {
-			outDict[key] = yamlObj
-		}
-	}
-
-	jsonBytes, err := json.Marshal(&outDict)
+	jsonBytes, err := json.Marshal(&yamlData)
 	if err != nil {
 		log.Log.Printf("collector[core.meta]: json: %s", err)
 		return nil, err
@@ -82,8 +69,8 @@ func collectEtcGocollectCoreMetaStarYaml() (data.Collected, error) {
 	return data.NewCollected(jsonBytes)
 }
 
-func getYamlData(filespath string) (map[string]([]byte), error) {
-	ret := make(map[string]([]byte))
+func getYamlData(filespath string) (map[string]interface{}, error) {
+	ret := make(map[string]interface{})
 
 	// ReadDir reads the directory named by dirname and returns a list
 	// of directory entries sorted by filename.
@@ -93,7 +80,19 @@ func getYamlData(filespath string) (map[string]([]byte), error) {
 	}
 
 	for _, fileinfo := range filelist {
-		if !fileinfo.IsDir() {
+		if fileinfo.IsDir() {
+			name := fileinfo.Name()
+			if !strings.HasPrefix(name, ".") {
+				subpath := sanejoin.Join(filespath, name)
+				data, err := getYamlData(subpath)
+				if err != nil {
+					log.Log.Printf("collector[core.meta]: %s: %s", subpath,
+						err)
+				} else {
+					ret[name] = data
+				}
+			}
+		} else {
 			name := fileinfo.Name()
 			if !strings.HasPrefix(name, ".") &&
 				strings.HasSuffix(name, ".yaml") {
@@ -103,8 +102,15 @@ func getYamlData(filespath string) (map[string]([]byte), error) {
 					log.Log.Printf("collector[core.meta]: %s: %s", fullpath,
 						err)
 				} else {
-					nameWithoutYaml := name[0 : len(name)-5] // ".yaml"
-					ret[nameWithoutYaml] = data
+					var yamlObj interface{}
+					err := yaml.Unmarshal(data, &yamlObj)
+					if err != nil {
+						log.Log.Printf("collector[core.meta]: %s: %s",
+							fullpath, err)
+					} else {
+						nameWithoutYaml := name[0 : len(name)-5] // ".yaml"
+						ret[nameWithoutYaml] = yamlObj
+					}
 				}
 			}
 		}
