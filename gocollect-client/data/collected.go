@@ -190,7 +190,7 @@ func (c *collected) BuildString(
 // in keys, or does it?
 // https://github.com/MongoEngine/mongoengine/pull/2193
 func warnAboutProblematicKeys(data []byte) {
-	var result map[string]any
+	var result any
 	e := json.Unmarshal(data, &result)
 	if e != nil {
 		// should have key here.. expand Collected[] ?
