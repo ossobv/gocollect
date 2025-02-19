@@ -43,6 +43,9 @@ type collected struct {
 
 // NewCollected creates a new Collected object from the supplied bytes.
 func NewCollected(data []byte) (Collected, error) {
+	// Warn about periods in keys.
+	warnAboutProblematicKeys(data)
+
 	// Compact the data and validate it at the same time.
 	compacted := new(bytes.Buffer)
 	e := json.Compact(compacted, data)
@@ -181,4 +184,44 @@ func (c *collected) BuildString(
 	}
 
 	return strings.Join(parts, "")
+}
+
+// Apparently we put this stuff in MongoDB and MongoDB does not like '.'
+// in keys, or does it?
+// https://github.com/MongoEngine/mongoengine/pull/2193
+func warnAboutProblematicKeys(data []byte) {
+	var result map[string]any
+	e := json.Unmarshal(data, &result)
+	if e != nil {
+		// should have key here.. expand Collected[] ?
+		log.Log.Printf("unmarshal fail: %s", e.Error())
+		return
+	}
+
+	hasProblematicKeys(result)
+}
+
+// hasProblematicKeys recursively checks for "[.]"/NUL/"^$" in any JSON keys.
+func hasProblematicKeys(obj any) bool {
+	switch v := obj.(type) {
+	case map[string]any:
+		for key, val := range v {
+			if strings.ContainsRune(key, '.') ||
+					strings.ContainsRune(key, 0) ||
+					strings.HasPrefix(key, "$") {
+				log.Log.Printf("found problematic key: %s", key)
+				return true
+			}
+			if hasProblematicKeys(val) { // Recursively check nested maps
+				return true
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if hasProblematicKeys(item) {
+				return true
+			}
+		}
+	}
+	return false
 }
