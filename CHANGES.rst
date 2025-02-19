@@ -3,18 +3,18 @@ Changes
 
 * v0.9.3 [2024-10-30]:
 
-    os.pkg: Fixes on Noble for the new sources.list format
-    sys.storage: Work on Noble. Add has_boot and has_rootfs booleans
+  - os.pkg: Fixes on Noble for the new sources.list format
+  - sys.storage: Work on Noble. Add has_boot and has_rootfs booleans
 
 * v0.9.2 [2024-09-05]:
 
-    app.lldp: Renamed from app.lldpctl and using lldpcli now
-    os.pkg: Fix so it works on Ubuntu/Noble with new sources.list format
+  - app.lldp: Renamed from app.lldpctl and using lldpcli now
+  - os.pkg: Fix so it works on Ubuntu/Noble with new sources.list format
 
 * v0.9.1 [2024-06-13]:
 
-    sys.cpu: Do not use lscpu; proc/cpuinfo is fine
-    sys.storage: Quickly add SED/OPAL status
+  - sys.cpu: Do not use lscpu; proc/cpuinfo is fine
+  - sys.storage: Quickly add SED/OPAL status
 
 * v0.9.0 [2023-10-05]:
 
