@@ -1,3 +1,10 @@
+gocollect (0.9.5-1) stable; urgency=medium
+
+  * New upstream release:
+    - core: Fix superfluous warnings.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Wed, 19 Jan 2025 17:04:12 +0100
+
 gocollect (0.9.4-1) stable; urgency=medium
 
   * New upstream release:
