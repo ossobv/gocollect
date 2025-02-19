@@ -1,3 +1,12 @@
+gocollect (0.9.4-1) stable; urgency=medium
+
+  * New upstream release:
+    - core: Warn about periods/NULs/starting-dollars in keys. When putting the
+      JSON blob in Mongo they can (could in the past?) be problematic.
+    - core.meta: Allow subdirectories for dictionaries in dictionaries.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Wed, 19 Jan 2025 16:04:01 +0100
+
 gocollect (0.9.3-1) stable; urgency=medium
 
   * New upstream release:
