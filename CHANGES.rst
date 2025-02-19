@@ -1,6 +1,12 @@
 Changes
 -------
 
+* v0.9.4 [2025-02-19]:
+
+  - core: Warn about periods/NULs/starting-dollars in keys. When putting the
+    JSON blob in Mongo they can (could in the past?) be problematic.
+  - core.meta: Allow subdirectories for dictionaries in dictionaries.
+
 * v0.9.3 [2024-10-30]:
 
   - os.pkg: Fixes on Noble for the new sources.list format
