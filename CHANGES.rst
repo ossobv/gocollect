@@ -1,6 +1,10 @@
 Changes
 -------
 
+* v0.9.5 [2025-02-19]:
+
+  - core: Fix superfluous warnings in previous version.
+
 * v0.9.4 [2025-02-19]:
 
   - core: Warn about periods/NULs/starting-dollars in keys. When putting the
