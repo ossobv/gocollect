@@ -21,5 +21,5 @@ RUN chmod -R ga-w /app /srv/gocollect-data
 USER www-data
 
 ENTRYPOINT ["python3"]
-CMD ["-c", "import os;print('\\x0a'.join(sorted(os.listdir('/app'))))"]
+CMD ["-c", "import os;print('\\x0a'.join(sorted(cmd for cmd in os.listdir('/app') if cmd != 'lib')))"]
 # run as: gocollect-consumer rmq2file|wsgi2file
