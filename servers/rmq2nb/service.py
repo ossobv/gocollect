@@ -597,7 +597,7 @@ class Device(BaseResource):
     interface_url = '/api/dcim/interfaces/'
     interface_param = 'interface_id'
     interface_type = 'dcim.interface'
-    role_attr = 'device_role'
+    role_attr = 'role'
 
     @classmethod
     def set_defaults(cls, **kwargs):
@@ -618,7 +618,7 @@ class Device(BaseResource):
         site = prefix['site']['id'] if prefix and prefix['site'] else cls.site
         return {
             'name': data['fqdn'],
-            'device_role': cls.role,
+            'role': cls.role,
             'device_type': cls.type,
             'site': site,
             'custom_fields': {
