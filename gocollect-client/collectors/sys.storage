@@ -278,7 +278,7 @@ else
 "'"%s":"%s","%s":%s,"%s":%s}\n' \
             "$comma" logicalname "$dev" product "$product" \
             serial "$serial" size "$bytes" sectorsize "$sectorsize" \
-            sedstatus "$sedstatus"
+            sedstatus "$sedstatus" \
             has_boot $(is_in_list "$dev" $BOOTS) \
             has_rootfs $(is_in_list "$dev" $ROOTS)
     done
