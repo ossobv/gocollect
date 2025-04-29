@@ -157,16 +157,58 @@ devices=$( (
 # ^- exclude Ceph "RADOS Block Device"
 
 if command -v sedutil-cli >/dev/null; then
-    sed_status() {
+    parse_sedutil_query() {
         local ret
-        if ret=$(sedutil-cli --query "$1" 2>/dev/null); then
+        ret=$1
+
+        # SAS ST10000NM0226 KT01 SEAGATE
+        # NVMe MTFDKCC30T7TGR G0MF000 312410498BB5
+        model=$(printf '%s' "$ret" | sed -ne '
+            /^./{s/[[:blank:]]\+/ /g;s/^[^ ]* //p;q}')
+        # 0x0100 Enterprise
+        # 0x0203 OPAL 2.0
+        mode=$(printf '%s' "$ret" | sed -ne '
+            s/^\(.*\) function (\(0x0100\|0x0203\)).*/\2 \1/p')
+        case "$mode $model" in
+        '0x0100 Enterprise '*|'0x0203 OPAL 2.0 NVMe MTF'*)
+            # So far, we've seen SEAGATE 10TB and 24TB with "Enterprise"
+            # SED that require MBREnabled=Y for locking to be on.
+            # [SAS ST10000NM0226 KT01 SEAGATE]
+            only_mbrenabled_means_locked=true
+            ;;
+        '0x0203 OPAL 2.0 NVMe MTF'*)
+            # Micron MTF* drives are the first/only NVMe/OPAL drives we've seen
+            # which require MBREnabled=Y to designate that they have locking
+            # enabled.
+            # [NVMe MTFDKCC30T7TGR G0MF000 312410498BB5]
+            only_mbrenabled_means_locked=true
+            ;;
+        *)
+            only_mbrenabled_means_locked=false
+            ;;
+        esac
+        if $only_mbrenabled_means_locked; then
+            ret=$(printf '%s' "$ret" | sed -ne "/^    Locked/{
+                s/.*LockingEnabled = Y, LockingSupported = Y,.*\
+ MBREnabled = Y,.*/LOCKED/p
+                s/.*LockingSupported = Y,.* MBREnabled = N.*/NOT_LOCKED/p
+                s/.*LockingSupported = N.*/NOT_SUPPORTED/p
+                q
+            }")
+        else
             ret=$(printf '%s' "$ret" | sed -ne '/^    Locked/{
                 s/.*LockingEnabled = Y, LockingSupported = Y.*/LOCKED/p
                 s/.*LockingEnabled = N, LockingSupported = Y.*/NOT_LOCKED/p
                 s/.*LockingSupported = N.*/NOT_SUPPORTED/p
                 q
             }')
-            echo "${ret:-UNEXPECTED}"
+        fi
+        echo "${ret:-UNEXPECTED}"
+    }
+    sed_status() {
+        local ret
+        if ret=$(sedutil-cli --query "$1" 2>/dev/null); then
+            parse_sedutil_query "$ret"
         else
             echo NOT_VALIDSED
         fi
