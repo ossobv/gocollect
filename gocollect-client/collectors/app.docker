@@ -24,3 +24,11 @@ docker images --format='{{if not (eq .Tag "<none>")}}'\
 BEGIN{print "{\"images\":{"}
 /./{if(n)printf ",";print $0;n=1}
 END{print "}}"}'
+
+# Maybe add this to get versions? Only works for those images which do
+# org.opencontainers.image.version.
+#for image in $(docker images --format=\
+#'{{if not (eq .Tag "<none>")}}{{.Repository}}:{{.Tag}}{{end}}'); do
+#    docker inspect "$image" -f "{{index .RepoTags 0}} -\
+# {{index .Config.Labels \"org.opencontainers.image.version\"}}"
+#done
