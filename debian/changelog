@@ -1,3 +1,15 @@
+gocollect (0.9.6-1) stable; urgency=medium
+
+  * New upstream release:
+    - os.pkg: Include packages that are on hold or maybe partially installed.
+      Without this change, held packages (apt-mark hold) would not be listed.
+    - sys.storage: Consider some drives only LOCKED if they set MBREnabled=Y.
+      This fixes so we aren't lied to that certain drives are locked, when they
+      in fact aren't.
+    - sys.storage: Fix bug when smartctl is not installed but nvme-cli is.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Tue, 29 Apr 2025 14:15:57 +0200
+
 gocollect (0.9.5-1) stable; urgency=medium
 
   * New upstream release:
