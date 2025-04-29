@@ -1,6 +1,15 @@
 Changes
 -------
 
+* v0.9.6 [2025-04-29]:
+
+  - os.pkg: Include packages that are on hold or maybe partially installed.
+    Without this change, held packages (apt-mark hold) would not be listed.
+  - sys.storage: Consider some drives only LOCKED if they set MBREnabled=Y.
+    This fixes so we aren't lied to that certain drives are locked, when they
+    in fact aren't.
+  - sys.storage: Fix bug when smartctl is not installed but nvme-cli is.
+
 * v0.9.5 [2025-02-19]:
 
   - core: Fix superfluous warnings in previous version.

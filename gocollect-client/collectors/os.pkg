@@ -21,7 +21,7 @@ while read x; do
 echo '{"installed":{'
 awk '
 BEGIN { RS = "\n\n" }
-/Status: install ok installed/ {
+/Status: [^ ]* ok installed/ {
     arraylen = split($0, array, "\n")
     name = ""
     version = ""
