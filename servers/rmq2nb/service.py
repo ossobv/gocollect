@@ -474,6 +474,10 @@ class BaseResource:
         return not (ip.is_loopback() or ip.is_link_local())
 
     def assign_ip_address(self, interface_id, ip, dry_run):
+        if ip.ip == ip.network:
+            log.debug('%s cannot assign network ID %s to interface', self, ip)
+            return
+
         addresses = []
         assigned_addresses = {}
         for address in self.netbox.get_addresses(str(ip))['results']:
