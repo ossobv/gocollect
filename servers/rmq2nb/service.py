@@ -536,7 +536,8 @@ class BaseResource:
         if 'error' in data:
             log.debug('%s does not have IPMI devices', self)
             return
-        elif data['IP Address'] == '0.0.0.0':
+        elif (data['IP Address'] == '0.0.0.0'
+                or data.get('Default Gateway IP') == '0.0.0.0'):
             log.debug('%s does not have a valid IPMI IP', self)
             return
 
