@@ -11,6 +11,7 @@ from netaddr import IPNetwork
 from requests import Session
 
 from lib.envparse import rmq_uri
+from lib.logging import configure_smtp_handler
 from lib.rmq.rmq_consumer import RMQConsumer
 
 logging.getLogger('pika').setLevel(logging.ERROR)
@@ -769,17 +770,27 @@ class Storage(object):
 
 def main():
     logging.basicConfig(level=environ.get('RMQ2NB_LOGLEVEL', 'INFO').upper())
+    smtp_uri = environ.get('RMQ2NB_SMTP_URI')
+    if smtp_uri:
+        try:
+            configure_smtp_handler(urlparse(smtp_uri), 'RMQ2NB Error')
+        except ValueError:
+            sys.exit(
+                f'Invalid RMQ2NB_SMTP_URI: {environ.get("RMQ2NB_SMTP_URI")!r}')
+
     # rmq://HOST[:PORT]/VIRTUAL_HOST/EXCHANGE[/QUEUE]
     try:
         rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
     except AssertionError:
         sys.exit(
             f'Invalid RMQ2NB_RMQ_URI: {environ.get("RMQ2NB_RMQ_URI", "")!r}')
+
     try:
         netbox_url = urlparse(environ.get('RMQ2NB_NB_URI', ''))
     except ValueError:
         sys.exit(
             f'Invalid RMQ2NB_NB_URI: {environ.get("RMQ2NB_NB_URI", "")!r}')
+
     dry_run = tuple(environ.get('RMQ2NB_DRY_RUN', ALL_KEYS).split())
     names_allowed = {
         i: True for i in environ.get('RMQ2NB_NAME_ALLOWED', '').split()}
@@ -793,6 +804,7 @@ def main():
         'RMQ2NB_NB_ROLES_SKIP_INTERFACES', '').split())
     site = int(environ.get('RMQ2NB_NB_SITE_ID', 1))
     vm_cluster = int(environ.get('RMQ2NB_NB_VM_CLUSTER_ID', 1))
+
     BaseResource.set_defaults(roles_skip_interfaces=roles_skip_interfaces)
     Device.set_defaults(
         bmc_type=bmc_type, iface_type=iface_type, role=device_role,
