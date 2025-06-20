@@ -9,6 +9,7 @@ import sys
 
 from netaddr import IPNetwork
 from requests import Session
+from requests.adapters import HTTPAdapter
 
 from lib.envparse import rmq_uri
 from lib.logging import configure_smtp_handler
@@ -41,6 +42,7 @@ class RequestError(Exception):
 class NetboxRequest:
     def __init__(self, url):
         self.session = Session()
+        self.session.mount('https://', HTTPAdapter(max_retries=3))
         if url.password:
             self.session.headers.update({
                 'Authorization': f'Token {url.password}',
@@ -49,6 +51,7 @@ class NetboxRequest:
         self.url = url._replace(netloc=url.netloc.split('@')[-1]).geturl()
 
     def request(self, method, url, **kwargs):
+        kwargs.setdefault('timeout', 5)
         if not url.startswith('https://'):
             url = urljoin(self.url, url)
         response = self.session.request(method, url, **kwargs)
