@@ -633,7 +633,12 @@ class Device(BaseResource):
             prefix = netbox.get_prefix_for_ip(data['ip6'])
         else:
             prefix = None
-        site = prefix['site']['id'] if prefix and prefix['site'] else cls.site
+
+        if prefix and prefix['scope_type'] == 'dcim.site':
+            site = prefix['scope_id']
+        else:
+            site = cls.site
+
         return {
             'name': data['fqdn'],
             'role': cls.role,
