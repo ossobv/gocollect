@@ -1,6 +1,22 @@
 Changes
 -------
 
+* v0.9.7 [2025-09-02]:
+
+  - init: Try to run last, after the system has booted.
+  - core.id: Fallback to python when IP cannot be determined via iputils.
+  - sys.cpu: Add cpu scaling/governor counts.
+  - sys.storage: Keep only block devices in sys.storage (not /dev/nvme0,
+    but /dev/nvme0n1).
+  - consumer: deps: Bump requests dep from 2.32.0 to 2.32.4 in /servers.
+  - consumer: Fix bug in Dockerfile ENV.
+  - rmq2nb: Add BufferingSMTPHandler for log messages.
+  - rmq2nb: Do not assign Network IDs to interface.
+  - rmq2nb: Ignore IPMI IP addresses with 0.0.0.0 gateway.
+  - rmq2nb: Replace skip interfaces with restricted roles.
+  - rmq2nb: Set request timeout and retries.
+  - rmq2nb: site has been replaced by scope generic foreign key.
+
 * v0.9.6 [2025-04-29]:
 
   - os.pkg: Include packages that are on hold or maybe partially installed.
