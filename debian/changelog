@@ -1,3 +1,14 @@
+gocollect (0.9.7-1) stable; urgency=medium
+
+  * New upstream release:
+    - init: Try to run last, after the system has booted.
+    - core.id: Fallback to python when IP cannot be determined via iputils.
+    - sys.cpu: Add cpu scaling/governor counts.
+    - sys.storage: Keep only block devices in sys.storage (not /dev/nvme0,
+      but /dev/nvme0n1).
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Wed, 03 Sep 2025 13:55:12 +0200
+
 gocollect (0.9.6-1) stable; urgency=medium
 
   * New upstream release:
