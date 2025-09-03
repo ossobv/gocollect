@@ -2,24 +2,14 @@
 # vim: set ts=8 sw=4 sts=4 et ai:
 # REQUIRES: coreutils(head printf tr uname wc)
 # REQUIRES: sed(sed)
-# REQUIRES: util-linux(lscpu)  # optional
 
-# lscpu=$(lscpu 2>/dev/null)
-if false && test -n "$lscpu"; then
-    arch=$(echo "$lscpu" | sed -e '/^Architecture:/!d;s/^[^:]*: *//')
-    cpus=$(echo "$lscpu" | sed -e '/^CPU(s):/!d;s/^[^:]*: *//')
-    cores=$(echo "$lscpu" | sed -e '/^Core(s) per socket:/!d;s/^[^:]*: *//')
-    name=$(echo "$lscpu" | sed -e '/^Vendor\|^Model/!d;s/^[^:]*: *//' |
-           tr '\n' ' ' | sed -e 's/ $//')
-else
-    arch=$(uname -m)
-    cpus=$(sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l)
-    cores=$(sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 |
-            sed -e 's/.* //')
-    name=$(sed -e '/^\(vendor_id\|model\|model name\)[[:blank:]]*:/!d' \
-           /proc/cpuinfo | head -n3 | sed -e 's/^[^:]*: //' | tr '\n' ' ' |
-           sed -e 's/  */ /g;s/^ *//;s/ *$//')
-fi
+arch=$(uname -m)
+cpus=$(sed -e '/^processor[[:blank:]]*:/!d' /proc/cpuinfo | wc -l)
+cores=$(sed -e '/^cpu cores[[:blank:]]*:/!d' /proc/cpuinfo | head -n1 |
+        sed -e 's/.* //')
+name=$(sed -e '/^\(vendor_id\|model\|model name\)[[:blank:]]*:/!d' \
+       /proc/cpuinfo | head -n3 | sed -e 's/^[^:]*: //' | tr '\n' ' ' |
+       sed -e 's/  */ /g;s/^ *//;s/ *$//')
 
 vulns=$(
   ( cd /sys/devices/system/cpu/vulnerabilities 2>/dev/null &&
@@ -27,5 +17,29 @@ vulns=$(
     sed -e 's/["\\]//g;s/^\([^:]*\):Mitigation: \(.*\)/"\1":"\2",/' || echo) |
   sed -e '1s/^/{/;$s/,$//;$s/$/}/')
 
+# (example)
+# 8 performance => s/^performance|0$/performance|8/
+# 4 powersave => s/^powersave|0$/powersave|4/
+cpufreq_selected_sedre=$(
+    sort /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null |
+    uniq -c | sed -e '
+        s@['\''"|/\\]@@g
+        s@[[:blank:]]*\([0-9]\+\)[[:blank:]]\+\(.*\)@s/^\2|0$/\2|\1/@')
+# (example)
+# conservative|0
+# performance|8
+# powersave|4
+cpufreq_governors=$(
+    sort -u /sys/devices/system/cpu/cpu*/cpufreq/scaling_available_governors \
+        2>/dev/null | tr ' ' '\n' | sort -u | sed -e '/^$/d;s/$/|0/' |
+    sed -e "$cpufreq_selected_sedre")
+if test -n "$cpufreq_governors" && test -n "$cpufreq_selected_sedre"; then
+    cpufreq_governors=$(echo "$cpufreq_governors" |
+        sed -e 's/^\([^|]*\)|\(.*\)/"\1":\2,/g;1s/^/{/;$s/,$/}/')
+else
+    cpufreq_governors=null
+fi
+
 printf '{"arch":"%s","cores":"%s","cpus":"%s","product":"%s",'\
-'"vulnerability-mitigations":%s}\n' "$arch" "$cores" "$cpus" "$name" "$vulns"
+'"cpufreq":{"governors":%s},"vulnerability-mitigations":%s}\n' \
+    "$arch" "$cores" "$cpus" "$name" "$cpufreq_governors" "$vulns"

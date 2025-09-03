@@ -2,6 +2,9 @@
 [Unit]
 Description=GoCollect, the rarely changing sysinfo collector
 After=network-online.target
+# Have this run last. So we don't get lots of updates, like os.kernel
+# adding modules that were started by daemons.
+After=multi-user.target
 
 [Service]
 ExecStart=/usr/sbin/gocollect

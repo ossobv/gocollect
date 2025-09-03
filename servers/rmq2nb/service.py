@@ -9,8 +9,10 @@ import sys
 
 from netaddr import IPNetwork
 from requests import Session
+from requests.adapters import HTTPAdapter
 
 from lib.envparse import rmq_uri
+from lib.logging import configure_smtp_handler
 from lib.rmq.rmq_consumer import RMQConsumer
 
 logging.getLogger('pika').setLevel(logging.ERROR)
@@ -40,6 +42,7 @@ class RequestError(Exception):
 class NetboxRequest:
     def __init__(self, url):
         self.session = Session()
+        self.session.mount('https://', HTTPAdapter(max_retries=3))
         if url.password:
             self.session.headers.update({
                 'Authorization': f'Token {url.password}',
@@ -48,6 +51,7 @@ class NetboxRequest:
         self.url = url._replace(netloc=url.netloc.split('@')[-1]).geturl()
 
     def request(self, method, url, **kwargs):
+        kwargs.setdefault('timeout', 5)
         if not url.startswith('https://'):
             url = urljoin(self.url, url)
         response = self.session.request(method, url, **kwargs)
@@ -165,7 +169,7 @@ class BaseResource:
 
     @classmethod
     def set_defaults(cls, **kwargs):
-        cls.roles_skip_interfaces = kwargs.get('roles_skip_interfaces', ())
+        cls.restricted_roles = kwargs.get('restricted_roles', ())
 
     def __init__(self, obj, netbox):
         self.obj = obj
@@ -253,13 +257,14 @@ class BaseResource:
 
     def sync_interfaces(self, data, dry_run=False):
         # Skip interface updates for some roles.
-        if self.roles_skip_interfaces:
+        restricted_role = False
+        if self.restricted_roles:
             role = self.get_role()
-            if role is not None and role.startswith(
-                    self.roles_skip_interfaces):
-                log.info('Skipping interfaces for %s with role %s',
-                         self.obj['display'], role)
-                return
+            if role is not None and role.startswith(self.restricted_roles):
+                log.info(
+                    'Skipping interface rename/remove and ip addresses for %s '
+                    'with role %s', self.obj['display'], role)
+                restricted_role = True
 
         # List of interfaces with their IP addresses.
         addresses = {
@@ -271,12 +276,13 @@ class BaseResource:
             for i in self.get_interfaces()['results']}
         data = self.prepare_interface_data(data)
 
-        special_interfaces = self.rename_or_remove_not_configured_interfaces(
-            data, interfaces, addresses, dry_run)
+        # User could be changing device config so skip interface rename/remove.
+        if not restricted_role:
+            self.rename_or_remove_not_configured_interfaces(
+                data, interfaces, addresses, dry_run)
 
         # Keep track which interface/IP address combinations are configured
         # on the gocollect node.
-        seen_addresses = []
         for name, iface in data.items():
             if name in self.special_interfaces:
                 continue
@@ -290,6 +296,18 @@ class BaseResource:
                     iface['parent'] = None
             interfaces[name] = self.create_or_update_interface(
                 iface, interfaces, dry_run)
+
+        # Netbox is the source of truth, skip IP addresses.
+        if not restricted_role:
+            self.update_ip_addresses(data, interfaces, addresses, dry_run)
+
+    def update_ip_addresses(self, data, interfaces, addresses, dry_run=False):
+        seen_addresses = []
+        for name, iface in data.items():
+            if name in self.special_interfaces:
+                continue
+            if not self.is_meaningful_interface(iface):
+                continue
             interface_id = interfaces[name]['id']
             for ip in iface['ip']:
                 if not self.is_meaningful_address(ip):
@@ -300,11 +318,15 @@ class BaseResource:
                     # Assign IP addresses which have not been assigned.
                     self.assign_ip_address(interface_id, ip, dry_run)
 
+        special_interface_ids = [
+            interface['id']
+            for name, interface in interfaces.items()
+            if name in self.special_interfaces]
         # Remove addresses which are not configured on the gocollect node.
         for key, address in addresses.items():
             if (key not in seen_addresses
                     and address['assigned_object_id']
-                    not in special_interfaces):
+                    not in special_interface_ids):
                 if dry_run:
                     log.info(
                         'Would remove %s ipaddress %s', self,
@@ -335,11 +357,6 @@ class BaseResource:
                         interface[param]['id'] if interface[param] else None)
                     if data[param] != value:
                         updates[param] = data[param]
-                elif param == 'type':
-                    # Type is a value/label dictionary.
-                    if (param in interface
-                            and data[param] != interface[param]['value']):
-                        updates[param] = data[param]
                 elif param in interface and data[param] != interface[param]:
                     updates[param] = data[param]
             if updates:
@@ -366,10 +383,8 @@ class BaseResource:
 
     def rename_or_remove_not_configured_interfaces(
             self, data, interfaces, addresses, dry_run):
-        special_interfaces = []
         for name in list(interfaces.keys()):
             if name in self.special_interfaces:
-                special_interfaces.append(interfaces[name]['id'])
                 continue
             if name in data:
                 continue
@@ -400,8 +415,6 @@ class BaseResource:
             else:
                 self.netbox.delete(iface['url'])
                 log.info('%s removed interface %s', self, iface['display'])
-
-        return special_interfaces
 
     def find_new_interface_name_with_ip(self, iface, data, addresses):
         # If an interface was named differently between host/netbox try to find
@@ -474,6 +487,10 @@ class BaseResource:
         return not (ip.is_loopback() or ip.is_link_local())
 
     def assign_ip_address(self, interface_id, ip, dry_run):
+        if ip.ip == ip.network:
+            log.debug('%s cannot assign network ID %s to interface', self, ip)
+            return
+
         addresses = []
         assigned_addresses = {}
         for address in self.netbox.get_addresses(str(ip))['results']:
@@ -532,7 +549,8 @@ class BaseResource:
         if 'error' in data:
             log.debug('%s does not have IPMI devices', self)
             return
-        elif data['IP Address'] == '0.0.0.0':
+        elif (data['IP Address'] == '0.0.0.0'
+                or data.get('Default Gateway IP') == '0.0.0.0'):
             log.debug('%s does not have a valid IPMI IP', self)
             return
 
@@ -615,7 +633,12 @@ class Device(BaseResource):
             prefix = netbox.get_prefix_for_ip(data['ip6'])
         else:
             prefix = None
-        site = prefix['site']['id'] if prefix and prefix['site'] else cls.site
+
+        if prefix and prefix['scope_type'] == 'dcim.site':
+            site = prefix['scope_id']
+        else:
+            site = cls.site
+
         return {
             'name': data['fqdn'],
             'role': cls.role,
@@ -764,17 +787,27 @@ class Storage(object):
 
 def main():
     logging.basicConfig(level=environ.get('RMQ2NB_LOGLEVEL', 'INFO').upper())
+    smtp_uri = environ.get('RMQ2NB_SMTP_URI')
+    if smtp_uri:
+        try:
+            configure_smtp_handler(urlparse(smtp_uri), 'RMQ2NB Error')
+        except ValueError:
+            sys.exit(
+                f'Invalid RMQ2NB_SMTP_URI: {environ.get("RMQ2NB_SMTP_URI")!r}')
+
     # rmq://HOST[:PORT]/VIRTUAL_HOST/EXCHANGE[/QUEUE]
     try:
         rmq_url = rmq_uri(environ.get('RMQ2NB_RMQ_URI', ''))
     except AssertionError:
         sys.exit(
             f'Invalid RMQ2NB_RMQ_URI: {environ.get("RMQ2NB_RMQ_URI", "")!r}')
+
     try:
         netbox_url = urlparse(environ.get('RMQ2NB_NB_URI', ''))
     except ValueError:
         sys.exit(
             f'Invalid RMQ2NB_NB_URI: {environ.get("RMQ2NB_NB_URI", "")!r}')
+
     dry_run = tuple(environ.get('RMQ2NB_DRY_RUN', ALL_KEYS).split())
     names_allowed = {
         i: True for i in environ.get('RMQ2NB_NAME_ALLOWED', '').split()}
@@ -784,11 +817,17 @@ def main():
     bmc_type = environ.get('RMQ2NB_NB_DEVICE_BMC_TYPE', '1000base-t')
     device_role = int(environ.get('RMQ2NB_NB_DEVICE_ROLE_ID', 1))
     device_type = int(environ.get('RMQ2NB_NB_DEVICE_TYPE_ID', 1))
-    roles_skip_interfaces = tuple(environ.get(
-        'RMQ2NB_NB_ROLES_SKIP_INTERFACES', '').split())
+    roles_skip_interfaces = environ.get('RMQ2NB_NB_ROLES_SKIP_INTERFACES', '')
+    if roles_skip_interfaces:
+        sys.exit(
+            'RMQ2NB_NB_ROLES_SKIP_INTERFACES has been removed use '
+            'RMQ2NB_NB_RESTRICTED_ROLES to handle roles with caution')
+    restricted_roles = tuple(environ.get(
+        'RMQ2NB_NB_RESTRICTED_ROLES', '').split())
     site = int(environ.get('RMQ2NB_NB_SITE_ID', 1))
     vm_cluster = int(environ.get('RMQ2NB_NB_VM_CLUSTER_ID', 1))
-    BaseResource.set_defaults(roles_skip_interfaces=roles_skip_interfaces)
+
+    BaseResource.set_defaults(restricted_roles=restricted_roles)
     Device.set_defaults(
         bmc_type=bmc_type, iface_type=iface_type, role=device_role,
         type=device_type, site=site)

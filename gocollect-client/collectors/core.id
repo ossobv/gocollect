@@ -32,6 +32,15 @@ fqdn=$(hostname -f 2>/dev/null || hostname)
 ip4=$(ip route get 255.255.255.255 | sed -e '
       / dev .* src /!d;s/.* src \+\([^[:blank:][:cntrl:]"\\]*\).*/\1/')
 
+# On some systems (switches) we need to supply a VRF to ip route. We
+# don't know which VRF. But, if gocollect is in the right network
+# namespace, we can connect. We're using python already in os.pkg, so
+# we'll use that as fallback.
+if test -z "$ip4"; then
+    ip4=$(python -c 'from socket import *;s=socket(AF_INET,SOCK_DGRAM);'\
+'s.connect(("1.2.3.4",1234));print(s.getsockname()[0])' 2>/dev/null)
+fi
+
 # check/update fqdn
 if test "$fqdn" = "localhost" || test "$fqdn" = "localhost.localdomain"; then
     fqdn=noname-$(echo "$ip4" | sed -e 's/\./-/g')

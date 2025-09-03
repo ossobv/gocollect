@@ -10,7 +10,7 @@ RUN pip install -r /tmp/requirements.txt
 RUN mkdir -p /app /srv/gocollect-data
 WORKDIR /app
 
-ENV PYTHONPATH /app
+ENV PYTHONPATH=/app
 COPY ["lib", "/app/lib"]
 COPY ["rmq2es", "/app/rmq2es"]
 COPY ["rmq2file", "/app/rmq2file"]
