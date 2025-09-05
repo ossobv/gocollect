@@ -301,6 +301,37 @@ class BaseResource:
         if not restricted_role:
             self.update_ip_addresses(data, interfaces, addresses, dry_run)
 
+    def patch_interface(self, interface, updates, dry_run):
+        if dry_run:
+            log.info(
+                'Would update %s interface %s with %r', self,
+                interface['display'], updates)
+            return
+
+        if 'mac_address' in updates:
+            mac_address = self.create_or_update_mac_address(
+                interface, updates['mac_address'])
+            updates['primary_mac_address'] = mac_address['id']
+        interface = self.netbox.patch(
+            interface['url'], json=updates)
+        log.info(
+            '%s updated interface %s with %r', self,
+            interface['display'], updates)
+
+    def create_or_update_mac_address(self, interface, mac_address):
+        if interface['mac_addresses']:
+            url = interface['mac_addresses'][0]['url']
+            mac = self.netbox.patch(url, json={'mac_address': mac_address})
+        else:
+            url = '/api/dcim/mac-addresses/'
+            mac = self.netbox.post(
+                url, json={
+                    'assigned_object_type': self.interface_type,
+                    'assigned_object_id': interface['id'],
+                    'mac_address': mac_address,
+                })
+        return mac
+
     def update_ip_addresses(self, data, interfaces, addresses, dry_run=False):
         seen_addresses = []
         for name, iface in data.items():
@@ -360,16 +391,7 @@ class BaseResource:
                 elif param in interface and data[param] != interface[param]:
                     updates[param] = data[param]
             if updates:
-                if dry_run:
-                    log.info(
-                        'Would update %s interface %s with %r', self,
-                        interface['display'], updates)
-                else:
-                    interface = self.netbox.patch(
-                        interface['url'], json=updates)
-                    log.info(
-                        '%s updated interface %s with %r', self,
-                        interface['display'], updates)
+                self.patch_interface(interface, updates, dry_run)
         elif dry_run:
             log.info(
                 'Would create %s interface %s using %r', self, data['name'],
@@ -569,17 +591,8 @@ class BaseResource:
                 updates['mac_address'] = data['MAC Address']
             if interface['name'] != self.bmc_interface:
                 updates['name'] = self.bmc_interface
-
             if updates:
-                if dry_run:
-                    log.info(
-                        'Would update %s interface %s with %r', self,
-                        interface['display'], updates)
-                else:
-                    interface = self.netbox.patch(
-                        interface['url'], json=updates)
-                    log.info(
-                        '%s updated interface %s', self, interface['display'])
+                self.patch_interface(interface, updates, dry_run)
         elif dry_run:
             log.info('Would create %s interface %s', self, self.bmc_interface)
             return
