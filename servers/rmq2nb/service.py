@@ -351,7 +351,7 @@ class BaseResource:
                 if param in ('type',):
                     # Leave the interface speed/type as set by the user.
                     pass
-                elif param in (self.param[:-3], 'parent'):
+                elif param in (self.attr, 'parent'):
                     # device/vm/parent is a nested object.
                     value = (
                         interface[param]['id'] if interface[param] else None)
@@ -449,7 +449,7 @@ class BaseResource:
                 iface_type = 'virtual'
             interfaces.append({
                 'name': name,
-                self.param[:-3]: self.obj['id'],
+                self.attr: self.obj['id'],
                 'mac_address': iface['mac'].upper() or None,
                 'parent': parent,
                 'type': iface_type,
@@ -586,7 +586,7 @@ class BaseResource:
         else:
             interface = self.netbox.post(self.interface_url, json={
                 'name': self.bmc_interface,
-                self.param[:-3]: self.obj['id'],
+                self.param: self.obj['id'],
                 'mac_address': data['MAC Address'].upper() or None,
                 'type': self.bmc_type,
                 'mgmt_only': True,
@@ -611,6 +611,7 @@ class BaseResource:
 
 class Device(BaseResource):
     url = '/api/dcim/devices/'
+    attr = 'device'
     param = 'device_id'
     interface_url = '/api/dcim/interfaces/'
     interface_param = 'interface_id'
@@ -654,6 +655,7 @@ class Device(BaseResource):
 
 class VM(BaseResource):
     url = '/api/virtualization/virtual-machines/'
+    attr = 'virtual_machine'
     param = 'virtual_machine_id'
     interface_url = '/api/virtualization/interfaces/'
     interface_param = 'vminterface_id'
