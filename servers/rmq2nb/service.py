@@ -5,6 +5,7 @@ import logging
 import pika
 from os import environ
 from urllib.parse import urljoin, urlparse
+import re
 import sys
 
 from netaddr import IPNetwork
@@ -279,7 +280,7 @@ class BaseResource:
         # User could be changing device config so skip interface rename/remove.
         if not restricted_role:
             self.rename_or_remove_not_configured_interfaces(
-                data, interfaces, addresses, dry_run)
+                data, interfaces, dry_run)
 
         # Keep track which interface/IP address combinations are configured
         # on the gocollect node.
@@ -297,7 +298,7 @@ class BaseResource:
             interfaces[name] = self.create_or_update_interface(
                 iface, interfaces, dry_run)
 
-        # Netbox is the source of truth, skip IP addresses.
+        # Netbox is the source of truth, skip restricted roles.
         if not restricted_role:
             self.update_ip_addresses(data, interfaces, addresses, dry_run)
 
@@ -404,7 +405,7 @@ class BaseResource:
         return interface
 
     def rename_or_remove_not_configured_interfaces(
-            self, data, interfaces, addresses, dry_run):
+            self, data, interfaces, dry_run):
         for name in list(interfaces.keys()):
             if name in self.special_interfaces:
                 continue
@@ -412,8 +413,7 @@ class BaseResource:
                 continue
 
             iface = interfaces.pop(name)
-            new_name = self.find_new_interface_name_with_ip(
-                iface, data, addresses)
+            new_name = self.find_renamed_interface_name(iface, data)
             if new_name is not None and new_name not in interfaces:
                 if dry_run:
                     log.info(
@@ -438,24 +438,47 @@ class BaseResource:
                 self.netbox.delete(iface['url'])
                 log.info('%s removed interface %s', self, iface['display'])
 
-    def find_new_interface_name_with_ip(self, iface, data, addresses):
+    def find_renamed_interface_name(self, iface, data):
         # If an interface was named differently between host/netbox try to find
-        # the interface by matching it's ip addresses.
-        candidates, ips = set(), []
-        for iface_type, iface_id, iface_ip in addresses:
-            if iface_id != iface['id']:
-                continue
-            for name, iface_data in data.items():
-                for ip in iface_data['ip']:
-                    if str(ip) == iface_ip:
-                        ips.append(iface_ip)
-                        candidates.add(name)
+        # the interface by matching the mac. Note that virtual interfaces share
+        # the mac address of the parent and for those we also match the name
+        # suffix.
+        # iface: Interface instance data from netbox without ip addresses.
+        # data: All interface data from gocollect.
+        candidates = set()
+        # prefix > network type
+        # eth > Ethernet
+        # en > Ethernet
+        # ib > InfiniBand
+        # sl > Serial line IP (slip)
+        # wl > Wireless local area network (WLAN)
+        # ww > Wireless wide area network (WWAN)
+        # For suffix grab the numeric part.
+        # eth0 > enmlx0
+        # eth0.399 > enmlx0.399
+        suffix_re = re.compile(r'(\d+)$')
+
+        def split_name(s):
+            prefix = 'e' if s[0] == 'e' else s[:2]
+            m = suffix_re.search(s)
+            suffix = m.group(1) if m else None
+            return prefix, suffix
+
+        target = split_name(iface['name'])
+
+        for name, iface_data in data.items():
+            # MAC address, prefix and suffix must be a match.
+            if (iface_data['mac_address'] == iface['mac_address']
+                    and target == split_name(name)):
+                candidates.add(name)
+
         if len(candidates) == 1:
             return candidates.pop()
         elif len(candidates) > 1:
-            raise ValueError(
+            log.warning(
                 'Cannot uniquely identify the interface name matching '
-                f'addresses {ips}: {candidates}')
+                f'mac address({iface["name"]}, {iface["mac_address"]}): '
+                f'{candidates}')
 
     def prepare_interface_data(self, data):
         interfaces = []
