@@ -406,7 +406,11 @@ class BaseResource:
 
     def rename_or_remove_not_configured_interfaces(
             self, data, interfaces, dry_run):
-        for name in list(interfaces.keys()):
+        # Sort interface names by length to ensure child interfaces are
+        # processed/removed before parent interfaces.
+        interface_names = sorted(
+            interfaces, key=lambda x: (len(x), x), reverse=True)
+        for name in interface_names:
             if name in self.special_interfaces:
                 continue
             if name in data:
