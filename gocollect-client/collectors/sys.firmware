@@ -1,14 +1,107 @@
-#!/bin/sh
+#!/bin/bash
 # vim: set ts=8 sw=4 sts=4 et ai:
 # LABELS: hardware-only
-# REQUIRES: fwupd(fwupdmgr)
-# REQUIRES: kmod(modprobe) | module-init-tools(modprobe)
+# REQUIRES: dmidecode(dmidecode) fwupd(fwupdmgr) ipmitool(ipmitool)
 # REQUIRES: sed(sed)
+#
+# NOTE: Using bash instead of POSIX dash because we want to getkey() without
+# sed.
 
-if ! command -v fwupdmgr >/dev/null; then
-    echo "error: This script requires fwupdmgr" >&2
-    exit 1
+getblock() {
+    local heading="$1"
+    local data="$2"
+    # printf '%s\n' "$data" | sed -e '/^'"$heading"'/,/^$/!d')
+    local line
+    local in_block=false
+
+    while read -r line; do
+        if [[ "$line" = "$heading" ]]; then
+            in_block=true
+        fi
+        if $in_block; then
+            if [[ -z "$line" ]]; then
+                return 0
+            fi
+            printf '%s\n' "$line"
+        fi
+    done <<< "$data"
+}
+
+getkey() {
+    local key="$1"
+    local data="$2"
+    # printf '%s\n' "$data" |
+    # sed -ne 's/^[[:blank:]]*'"$key"'[[:blank:]]*:[[:blank:]]*
+    #            \(.*\?\)[[:blank:]]*$/\1/p'
+    local line
+    local val
+    while read -r line; do
+        if [[ "$line" =~ ^[[:blank:]]*"$key"[[:blank:]]*:[[:blank:]]*(.*) ]]
+        then
+            val=${BASH_REMATCH[1]}
+            val=${val%"${val##*[![:cntrl:][:blank:]]}"}
+            val=${val%%[\"\\]*}  # trim JS unsafe
+            printf '%s' "$val"
+            return 0
+        fi
+    done <<< "$data"
+}
+
+dmidecode=$(dmidecode)
+
+biosinfo=$(getblock 'BIOS Information' "$dmidecode")
+sysinfo=$(getblock 'System Information' "$dmidecode")
+boardinfo=$(getblock 'Base Board Information' "$dmidecode")
+
+mcinfo=
+if command -v ipmitool >/dev/null 2>&1; then
+    #modprobe ipmi_msghandler
+    #modprobe ipmi_devintf
+    #modprobe ipmi_si
+
+    devs=$(find /dev -name 'ipmi*' 2>/dev/null | wc -l)
+    if test $devs -gt 0; then
+        mcinfo=$(ipmitool mc info)
+    fi
 fi
 
-# Do we also want to get 'fwupdmgr security' later as well?
-exec fwupdmgr --json get-devices 2>/dev/null
+fwupdatesjs=
+if command -v fwupdmgr >/dev/null; then
+    # Do we also want to get 'fwupdmgr security' later as well?
+    fwupdatesjs=$(fwupdmgr --json get-devices 2>/dev/null)
+    if [[ "$fwupdatesjs" != '{'* ]]; then
+        fwupdatesjs=
+    fi
+fi
+if [[ -z "$fwupdatesjs" ]]; then
+    fwupdatesjs=null
+fi
+
+cat << EOF
+{
+    "bios": {
+        "vendor": "$(getkey 'Vendor' "$biosinfo")",
+        "version": "$(getkey 'Version' "$biosinfo")",
+        "reldate": "$(getkey 'Release Date' "$biosinfo")"
+    },
+    "sys": {
+        "manufacturer": "$(getkey 'Manufacturer' "$sysinfo")",
+        "product": "$(getkey 'Product Name' "$sysinfo")",
+        "uuid": "$(getkey 'UUID' "$sysinfo")"
+    },
+    "board": {
+        "manufacturer": "$(getkey 'Manufacturer' "$boardinfo")",
+        "product": "$(getkey 'Product Name' "$boardinfo")",
+        "version": "$(getkey 'Version' "$boardinfo")",
+        "serial": "$(getkey 'Serial Number' "$boardinfo")"
+    },
+    "bmc": {
+        "manufacturer": "$(getkey 'Manufacturer Name' "$mcinfo")",
+        "product": "$(getkey 'Product Name' "$mcinfo")",
+        "version": "$(getkey 'Firmware Revision' "$mcinfo")",
+        "devicerev": "$(getkey 'Device Revision' "$mcinfo")",
+        "ipmiver": "$(getkey 'IPMI Version' "$mcinfo")"
+    },
+    "firmware_updates": $fwupdatesjs
+}
+EOF
