@@ -1,6 +1,14 @@
 Changes
 -------
 
+* v0.9.8 [2026-01-05]:
+
+  - sys.firmware: Add BMC board into to sys.firmware.
+  - rmq2nb: Delete child interfaces before their parents.
+  - rmq2nb: Find renamed interfaces by mac address and name.
+  - rmq2nb: Fix mac address updates.
+  - rmq2nb: Use a seperate variable for the attribute name.
+
 * v0.9.7 [2025-09-02]:
 
   - init: Try to run last, after the system has booted.
