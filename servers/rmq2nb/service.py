@@ -5,6 +5,7 @@ import logging
 import pika
 from os import environ
 from urllib.parse import urljoin, urlparse
+import re
 import sys
 
 from netaddr import IPNetwork
@@ -279,7 +280,7 @@ class BaseResource:
         # User could be changing device config so skip interface rename/remove.
         if not restricted_role:
             self.rename_or_remove_not_configured_interfaces(
-                data, interfaces, addresses, dry_run)
+                data, interfaces, dry_run)
 
         # Keep track which interface/IP address combinations are configured
         # on the gocollect node.
@@ -297,9 +298,40 @@ class BaseResource:
             interfaces[name] = self.create_or_update_interface(
                 iface, interfaces, dry_run)
 
-        # Netbox is the source of truth, skip IP addresses.
+        # Netbox is the source of truth, skip restricted roles.
         if not restricted_role:
             self.update_ip_addresses(data, interfaces, addresses, dry_run)
+
+    def patch_interface(self, interface, updates, dry_run):
+        if dry_run:
+            log.info(
+                'Would update %s interface %s with %r', self,
+                interface['display'], updates)
+            return
+
+        if 'mac_address' in updates:
+            mac_address = self.create_or_update_mac_address(
+                interface, updates['mac_address'])
+            updates['primary_mac_address'] = mac_address['id']
+        interface = self.netbox.patch(
+            interface['url'], json=updates)
+        log.info(
+            '%s updated interface %s with %r', self,
+            interface['display'], updates)
+
+    def create_or_update_mac_address(self, interface, mac_address):
+        if interface['mac_addresses']:
+            url = interface['mac_addresses'][0]['url']
+            mac = self.netbox.patch(url, json={'mac_address': mac_address})
+        else:
+            url = '/api/dcim/mac-addresses/'
+            mac = self.netbox.post(
+                url, json={
+                    'assigned_object_type': self.interface_type,
+                    'assigned_object_id': interface['id'],
+                    'mac_address': mac_address,
+                })
+        return mac
 
     def update_ip_addresses(self, data, interfaces, addresses, dry_run=False):
         seen_addresses = []
@@ -351,7 +383,7 @@ class BaseResource:
                 if param in ('type',):
                     # Leave the interface speed/type as set by the user.
                     pass
-                elif param in (self.param[:-3], 'parent'):
+                elif param in (self.attr, 'parent'):
                     # device/vm/parent is a nested object.
                     value = (
                         interface[param]['id'] if interface[param] else None)
@@ -360,16 +392,7 @@ class BaseResource:
                 elif param in interface and data[param] != interface[param]:
                     updates[param] = data[param]
             if updates:
-                if dry_run:
-                    log.info(
-                        'Would update %s interface %s with %r', self,
-                        interface['display'], updates)
-                else:
-                    interface = self.netbox.patch(
-                        interface['url'], json=updates)
-                    log.info(
-                        '%s updated interface %s with %r', self,
-                        interface['display'], updates)
+                self.patch_interface(interface, updates, dry_run)
         elif dry_run:
             log.info(
                 'Would create %s interface %s using %r', self, data['name'],
@@ -382,16 +405,19 @@ class BaseResource:
         return interface
 
     def rename_or_remove_not_configured_interfaces(
-            self, data, interfaces, addresses, dry_run):
-        for name in list(interfaces.keys()):
+            self, data, interfaces, dry_run):
+        # Sort interface names by length to ensure child interfaces are
+        # processed/removed before parent interfaces.
+        interface_names = sorted(
+            interfaces, key=lambda x: (len(x), x), reverse=True)
+        for name in interface_names:
             if name in self.special_interfaces:
                 continue
             if name in data:
                 continue
 
             iface = interfaces.pop(name)
-            new_name = self.find_new_interface_name_with_ip(
-                iface, data, addresses)
+            new_name = self.find_renamed_interface_name(iface, data)
             if new_name is not None and new_name not in interfaces:
                 if dry_run:
                     log.info(
@@ -416,24 +442,47 @@ class BaseResource:
                 self.netbox.delete(iface['url'])
                 log.info('%s removed interface %s', self, iface['display'])
 
-    def find_new_interface_name_with_ip(self, iface, data, addresses):
+    def find_renamed_interface_name(self, iface, data):
         # If an interface was named differently between host/netbox try to find
-        # the interface by matching it's ip addresses.
-        candidates, ips = set(), []
-        for iface_type, iface_id, iface_ip in addresses:
-            if iface_id != iface['id']:
-                continue
-            for name, iface_data in data.items():
-                for ip in iface_data['ip']:
-                    if str(ip) == iface_ip:
-                        ips.append(iface_ip)
-                        candidates.add(name)
+        # the interface by matching the mac. Note that virtual interfaces share
+        # the mac address of the parent and for those we also match the name
+        # suffix.
+        # iface: Interface instance data from netbox without ip addresses.
+        # data: All interface data from gocollect.
+        candidates = set()
+        # prefix > network type
+        # eth > Ethernet
+        # en > Ethernet
+        # ib > InfiniBand
+        # sl > Serial line IP (slip)
+        # wl > Wireless local area network (WLAN)
+        # ww > Wireless wide area network (WWAN)
+        # For suffix grab the numeric part.
+        # eth0 > enmlx0
+        # eth0.399 > enmlx0.399
+        suffix_re = re.compile(r'(\d+)$')
+
+        def split_name(s):
+            prefix = 'e' if s[0] == 'e' else s[:2]
+            m = suffix_re.search(s)
+            suffix = m.group(1) if m else None
+            return prefix, suffix
+
+        target = split_name(iface['name'])
+
+        for name, iface_data in data.items():
+            # MAC address, prefix and suffix must be a match.
+            if (iface_data['mac_address'] == iface['mac_address']
+                    and target == split_name(name)):
+                candidates.add(name)
+
         if len(candidates) == 1:
             return candidates.pop()
         elif len(candidates) > 1:
-            raise ValueError(
+            log.warning(
                 'Cannot uniquely identify the interface name matching '
-                f'addresses {ips}: {candidates}')
+                f'mac address({iface["name"]}, {iface["mac_address"]}): '
+                f'{candidates}')
 
     def prepare_interface_data(self, data):
         interfaces = []
@@ -449,7 +498,7 @@ class BaseResource:
                 iface_type = 'virtual'
             interfaces.append({
                 'name': name,
-                self.param[:-3]: self.obj['id'],
+                self.attr: self.obj['id'],
                 'mac_address': iface['mac'].upper() or None,
                 'parent': parent,
                 'type': iface_type,
@@ -569,24 +618,15 @@ class BaseResource:
                 updates['mac_address'] = data['MAC Address']
             if interface['name'] != self.bmc_interface:
                 updates['name'] = self.bmc_interface
-
             if updates:
-                if dry_run:
-                    log.info(
-                        'Would update %s interface %s with %r', self,
-                        interface['display'], updates)
-                else:
-                    interface = self.netbox.patch(
-                        interface['url'], json=updates)
-                    log.info(
-                        '%s updated interface %s', self, interface['display'])
+                self.patch_interface(interface, updates, dry_run)
         elif dry_run:
             log.info('Would create %s interface %s', self, self.bmc_interface)
             return
         else:
             interface = self.netbox.post(self.interface_url, json={
                 'name': self.bmc_interface,
-                self.param[:-3]: self.obj['id'],
+                self.param: self.obj['id'],
                 'mac_address': data['MAC Address'].upper() or None,
                 'type': self.bmc_type,
                 'mgmt_only': True,
@@ -611,6 +651,7 @@ class BaseResource:
 
 class Device(BaseResource):
     url = '/api/dcim/devices/'
+    attr = 'device'
     param = 'device_id'
     interface_url = '/api/dcim/interfaces/'
     interface_param = 'interface_id'
@@ -654,6 +695,7 @@ class Device(BaseResource):
 
 class VM(BaseResource):
     url = '/api/virtualization/virtual-machines/'
+    attr = 'virtual_machine'
     param = 'virtual_machine_id'
     interface_url = '/api/virtualization/interfaces/'
     interface_param = 'vminterface_id'
