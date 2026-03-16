@@ -91,7 +91,10 @@ fi
 fwupdatesjs=
 if command -v fwupdmgr >/dev/null; then
     # Do we also want to get 'fwupdmgr security' later as well?
-    fwupdatesjs=$(fwupdmgr --json get-devices 2>/dev/null)
+    # The "Devices" all have a "Created" that gets updated timestamps. We do
+    # not want fluctuating data, so replace with 0.
+    fwupdatesjs=$(fwupdmgr --json get-devices 2>/dev/null |
+        sed -e 's/\("Created"[[:blank:]]*\):[[:blank:]]*[0-9]\+/\1:0/')
     if [[ "$fwupdatesjs" != '{'* ]]; then
         fwupdatesjs=
     fi
