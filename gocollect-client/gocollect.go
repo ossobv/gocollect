@@ -11,6 +11,7 @@ import (
 	"log/syslog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
@@ -227,6 +228,22 @@ func createCollectRunner(
 	ret.RegidFilename = defaultRegidFilename
 	ret.GoCollectVersion = versionStr
 
+	// Spool / stable-collector settings.
+	ret.SpoolPath = "/var/spool/gocollect"
+	if vals, ok := config["spool_path"]; ok {
+		ret.SpoolPath = vals[len(vals)-1]
+	}
+	ret.SampleN = 10
+	if vals, ok := config["sample_n"]; ok {
+		if n, err := strconv.Atoi(vals[len(vals)-1]); err == nil && n > 0 {
+			ret.SampleN = n
+		}
+	}
+	ret.StablePrefix = "app."
+	if vals, ok := config["stable_prefix"]; ok {
+		ret.StablePrefix = vals[len(vals)-1]
+	}
+
 	return ret
 }
 
@@ -283,32 +300,60 @@ func main() {
 
 	// Do complete run.
 	os.Stdout.Close()
-	var interval int
-	last_success := true
-	for {
-		ret := collectRunner.Run()
-		if oneShot {
-			if !ret {
-				log.Log.Fatal("CollectRunner.Run() returned false")
-			}
-			return
-		}
 
-		if ret {
-			// All good, run again in 4 hours
-			interval = 4 * 3600
-			last_success = true
-		} else if last_success {
-			// Retry in 5 minutes if this is the first run
-			interval = 300
-			last_success = false
-		} else {
-			// Keep retrying in larger intervals
-			interval *= 2
-			if interval > (4 * 3600) {
-				// Until we're at max
-				interval = 4 * 3600
+	// One-shot: run everything once (using spool data when available
+	// for stable collectors) and exit.
+	if oneShot {
+		if !collectRunner.Run() {
+			log.Log.Fatal("CollectRunner.Run() returned false")
+		}
+		return
+	}
+
+	// Daemon loop.
+	//
+	// Stable collectors (app.*) are sampled every sampleInterval and
+	// their output is written to the spool directory. At push time
+	// (every SampleN samples = fullInterval) Run() reads the mode
+	// (most frequent value) from the spool instead of running them live.
+	//
+	// Non-stable collectors run live on every push as before.
+	const fullInterval = 4 * 3600
+	samplesPerPush := collectRunner.SampleN
+	if samplesPerPush < 1 {
+		samplesPerPush = 1
+	}
+	sampleInterval := fullInterval / samplesPerPush
+
+	sampleCount := 0
+	var interval int
+	lastPushSuccess := true
+
+	for {
+		collectRunner.Sample()
+		sampleCount++
+
+		if sampleCount >= samplesPerPush {
+			ret := collectRunner.Run()
+			if ret {
+				sampleCount = 0
+				interval = sampleInterval
+				lastPushSuccess = true
+			} else if lastPushSuccess {
+				// First failure: retry push soon; keep accumulating samples.
+				sampleCount = samplesPerPush
+				interval = 300
+				lastPushSuccess = false
+			} else {
+				// Repeated failure: exponential backoff.
+				sampleCount = samplesPerPush
+				interval *= 2
+				if interval > fullInterval {
+					interval = fullInterval
+				}
 			}
+		} else {
+			interval = sampleInterval
 		}
 
 		signal.Alarm(interval)
@@ -316,6 +361,8 @@ func main() {
 		if sig.String() != "alarm clock" {
 			signal.Alarm(0)
 			log.Log.Printf("Got %s to wake up early", sig.String())
+			// Force a push on the next iteration.
+			sampleCount = samplesPerPush
 		}
 	}
 }

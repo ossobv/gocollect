@@ -13,6 +13,15 @@ type Runner struct {
 	CollectorsPaths  []string
 	RegidFilename    string
 	GoCollectVersion string
+
+	// Stable-collector (spool) settings.
+	// Collectors whose name starts with StablePrefix are sampled via
+	// Sample() and stored in SpoolPath. Run() then pushes the mode
+	// (most frequent value) from the last SampleN snapshots instead of
+	// a fresh run. Set SpoolPath to "" to disable spool behaviour.
+	SpoolPath    string
+	SampleN      int
+	StablePrefix string
 }
 
 // Run collects data from the collectors and pushes data to the central
@@ -41,6 +50,16 @@ func (r *Runner) Run() bool {
 		return false
 	}
 	return true
+}
+
+// Sample runs all stable collectors (those matching StablePrefix) and
+// saves each output to SpoolPath. It is a no-op when SpoolPath is empty.
+func (r *Runner) Sample() {
+	if r.SpoolPath == "" {
+		return
+	}
+	runner := newRunInfo(r)
+	runner.sampleStable()
 }
 
 // Get collects data from a single collector and returns it as a string.

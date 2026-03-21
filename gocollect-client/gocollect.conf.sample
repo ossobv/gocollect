@@ -32,6 +32,23 @@ collectors_path = /usr/share/gocollect/collectors
 collectors_path = /usr/local/share/gocollect/collectors
 collectors_path = /home/walter/GOPATH/src/github.com/ossobv/gocollect/collectors
 
+# spool_path: Directory where stable-collector snapshots are stored.
+#   Stable collectors (see stable_prefix) are sampled sample_n times
+#   per push cycle and their output is spooled here. At push time the
+#   most frequently occurring value (mode) across the snapshots is used
+#   instead of a fresh run. This filters out transient changes.
+#   Set to an empty string to disable spooling entirely.
+#spool_path = /var/spool/gocollect
+
+# sample_n: Number of snapshots to collect per push cycle (default 10).
+#   The push cycle is 4 hours, so with sample_n = 10 the stable
+#   collectors are sampled every 24 minutes.
+#sample_n = 10
+
+# stable_prefix: Collectors whose name starts with this prefix are
+#   treated as stable collectors (sampled + mode-pushed). Default: app.
+#stable_prefix = app.
+
 # Optionally include these files if available. At the moment, globbing
 # is not supported.
 include = /etc/gocollect.conf.local

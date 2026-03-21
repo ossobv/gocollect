@@ -8,10 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ossobv/gocollect/gocollect-client/data"
 	"github.com/ossobv/gocollect/gocollect-client/log"
 	"github.com/ossobv/gocollect/gocollect-client/shcollectors"
+	"github.com/ossobv/gocollect/gocollect-client/spool"
 )
 
 type runInfo struct {
@@ -33,6 +35,31 @@ func newRunInfo(r *Runner) (ri runInfo) {
 	ri.collectors = data.MergeCollectors(
 		&data.BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
 	return ri
+}
+
+// isStable reports whether key is a stable collector whose output
+// should be spooled rather than run fresh on every push.
+func (ri *runInfo) isStable(key string) bool {
+	return ri.runner.SpoolPath != "" &&
+		ri.runner.StablePrefix != "" &&
+		strings.HasPrefix(key, ri.runner.StablePrefix)
+}
+
+// sampleStable runs all stable collectors and saves their output to
+// the spool directory.
+func (ri *runInfo) sampleStable() {
+	for _, key := range ri.collectors.GetRunnable() {
+		if !ri.isStable(key) {
+			continue
+		}
+		collected := ri.collectors.Run(key)
+		if collected == nil || collected.IsEmpty() {
+			continue
+		}
+		if err := spool.Save(ri.runner.SpoolPath, key, collected, ri.runner.SampleN); err != nil {
+			log.Log.Printf("spool[%s]: save error: %s", key, err)
+		}
+	}
 }
 
 func (ri *runInfo) setCoreIDData() bool {
@@ -87,8 +114,16 @@ func (ri *runInfo) runAll() runStatus {
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
 	for _, collectorKey := range ri.collectors.GetRunnable() {
-		// Run a (patched) collector.
-		collected := ri.runCollector(collectorKey)
+		// For stable collectors use the spool mode; fall back to a
+		// live run only when no spool data exists yet.
+		var collected data.Collected
+		if ri.isStable(collectorKey) {
+			collected = spool.LoadMode(
+				ri.runner.SpoolPath, collectorKey, ri.runner.SampleN)
+		}
+		if collected == nil {
+			collected = ri.runCollector(collectorKey)
+		}
 		if collected == nil {
 			// logger.Printf(
 			//     "collector[%s]: exec fail", collectorKey)
