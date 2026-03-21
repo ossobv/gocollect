@@ -22,7 +22,7 @@ clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
-	go build $(GOFLAGS) $(GOLDFLAGS) .
+	go build -o gocollect $(GOFLAGS) $(GOLDFLAGS) .
 	if ldd gocollect | grep '=>'; then echo "ERROR: static linkage failed" >&2; \
 		$(RM) gocollect; false; fi
 
