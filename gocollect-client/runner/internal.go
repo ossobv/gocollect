@@ -110,7 +110,7 @@ func (ri *runInfo) runAll() runStatus {
 			break
 		}
 
-		collectors += 1
+		collectors++
 	}
 
 	return ret

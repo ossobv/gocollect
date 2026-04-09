@@ -284,7 +284,7 @@ func main() {
 	// Do complete run.
 	os.Stdout.Close()
 	var interval int
-	last_success := true
+	lastSuccess := true
 	for {
 		ret := collectRunner.Run()
 		if oneShot {
@@ -297,11 +297,11 @@ func main() {
 		if ret {
 			// All good, run again in 4 hours
 			interval = 4 * 3600
-			last_success = true
-		} else if last_success {
+			lastSuccess = true
+		} else if lastSuccess {
 			// Retry in 5 minutes if this is the first run
 			interval = 300
-			last_success = false
+			lastSuccess = false
 		} else {
 			// Keep retrying in larger intervals
 			interval *= 2
