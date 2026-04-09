@@ -48,7 +48,7 @@ type collected struct {
 func NewCollected(data []byte) (Collected, error) {
 	// Warn about periods in keys. But they seem to be legal in some
 	// collectors. Only warn if stderr is a tty.
-	if (isStderrTTY()) {
+	if isStderrTTY() {
 		warnAboutProblematicKeys(data)
 	}
 
@@ -213,8 +213,8 @@ func hasProblematicKeys(obj any) bool {
 	case map[string]any:
 		for key, val := range v {
 			if strings.ContainsRune(key, '.') ||
-					strings.ContainsRune(key, 0) ||
-					strings.HasPrefix(key, "$") {
+				strings.ContainsRune(key, 0) ||
+				strings.HasPrefix(key, "$") {
 				log.Log.Printf("possibly problematic key: %s", key)
 				return true
 			}
