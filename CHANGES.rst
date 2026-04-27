@@ -1,6 +1,19 @@
 Changes
 -------
 
+* v0.9.9 [2026-04-27]:
+
+  - core: Add stable-collector spool/mode feature for app.* collectors
+  - core: gocollect -k (--test-keys) now implies -s (--one-shot)
+  - app.psdiff: Add psdiff.dump next to psdiff.db
+  - app.ps-kvmex1: Do not die on new JSON kvm args
+  - os.keys: Fix so sshd_config Includes are read for ssh key location
+  - os.uptime: Fix fluctuating uptime
+  - sys.firmware: Add microversion to bmc.version
+  - sys.firmware: Fix fluctuating Created args
+  - sys.storage: Correctly show logical sector size for non-nvme
+  - rmq2nb: Fix validation of network ID and broadcast addresses
+
 * v0.9.8 [2026-01-05]:
 
   - sys.firmware: Add BMC board into to sys.firmware.
