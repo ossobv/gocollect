@@ -17,7 +17,8 @@ import (
 
 // Save writes collected data to <spoolPath>/<key>/<timestamp>.json,
 // then removes older files so that at most maxFiles are kept.
-func Save(spoolPath, key string, collected data.Collected, maxFiles int) error {
+func Save(spoolPath, key string, collected data.Collected,
+	maxFiles int) error {
 	dir := filepath.Join(spoolPath, key)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err

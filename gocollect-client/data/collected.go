@@ -71,7 +71,8 @@ func NewCollected(data []byte) (Collected, error) {
 	return &tmp, nil
 }
 
-// EmptyCollected creates a new empty Collected object. Use when there is no data.
+// EmptyCollected creates a new empty Collected object. Use when there
+// is no data.
 func EmptyCollected() Collected {
 	return &collected{data: ""}
 }

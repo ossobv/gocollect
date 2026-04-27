@@ -62,7 +62,8 @@ func (ri *runInfo) sampleCollectors() {
 		if collected == nil || collected.IsEmpty() {
 			continue
 		}
-		if err := spool.Save(ri.runner.SpoolPath, key, collected, ri.runner.SampledN); err != nil {
+		if err := spool.Save(ri.runner.SpoolPath, key, collected,
+			ri.runner.SampledN); err != nil {
 			log.Log.Printf("spool[%s]: save error: %s", key, err)
 		}
 	}

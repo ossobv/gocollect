@@ -338,7 +338,7 @@ func main() {
 
 // daemonLoop runs forever.
 func daemonLoop(collectRunner runner.Runner,
-			    sampleInterval int, samplesPerPush int) {
+	sampleInterval int, samplesPerPush int) {
 	// Use signals to sleep in the main thread.
 	sigHandler := signal.NewAlarmHupUsr1()
 
