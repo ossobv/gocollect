@@ -1,0 +1,21 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# REQUIRES: awk(awk)
+# NOTE: Remember to test changes with mawk(1).
+
+lines2js() {
+    awk '
+        {gsub("\"","");gsub("\\\\","");if(NR>1)printf ",";print "\"" $0 "\""}'
+}
+
+if command -v fwdiff >/dev/null; then
+    echo '{"fwdiff.dump":{"filelines":['
+    fwdiff dump 2>/dev/null | lines2js
+    if test -f /var/lib/fwdiff.db; then
+        echo ']},"fwdiff.db":{"filelines":['
+        lines2js < /var/lib/fwdiff.db
+    fi
+    echo ']}}'
+else
+    echo '{}'
+fi

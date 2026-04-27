@@ -40,12 +40,12 @@ func Save(spoolPath, key string, collected data.Collected, maxFiles int) error {
 // no spool data exists yet.
 func LoadMode(spoolPath, key string, n int) data.Collected {
 	dir := filepath.Join(spoolPath, key)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil || len(files) == 0 {
 		return nil
 	}
 
-	// ioutil.ReadDir returns entries sorted by name; since names are
+	// os.ReadDir returns entries sorted by name; since names are
 	// unix timestamps, newest entries are last. Take the last n.
 	if len(files) > n {
 		files = files[len(files)-n:]
@@ -86,7 +86,7 @@ func LoadMode(spoolPath, key string, n int) data.Collected {
 // trimOldFiles deletes the oldest files in dir until at most keep
 // remain.
 func trimOldFiles(dir string, keep int) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil || len(files) <= keep {
 		return
 	}
