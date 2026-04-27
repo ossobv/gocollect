@@ -70,7 +70,8 @@ func getOptionDefinition() getopt.Options {
 				Flags:        (getopt.Optional | getopt.ExampleIsDefault),
 				DefaultValue: defaultConfigFile},
 			{OptionDefinition: "one-shot|s",
-				Description:  "run once and exit",
+				Description: "run once and exit " +
+					"(implied when using --test-key)",
 				Flags:        getopt.Flag,
 				DefaultValue: false},
 			{OptionDefinition: "test-key|k",
@@ -199,13 +200,9 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		}
 	}
 
-	// Only allow --test-key with --one-shot.
+	// Using --test-key implies --one-shot.
 	if _, ok := options["test-key"]; ok && !options["one-shot"].Bool {
-		fmt.Fprintf(
-			os.Stderr,
-			"%s: --test-key only works together with --one-shot.\n",
-			filepath.Base(os.Args[0]))
-		os.Exit(1)
+		options["one-shot"] = getopt.OptionValue{Bool: true}
 	}
 }
 
