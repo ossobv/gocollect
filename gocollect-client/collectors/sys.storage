@@ -277,7 +277,7 @@ if command -v smartctl >/dev/null; then
             test -z "$sectorsize" && \
                 sectorsize=$(echo "$smartctl" | sed -e '
                     /^\(Sector Size\|Logical block size\)/!d
-                    s/^[^:]*:.*[[:blank:]]\([0-9]\+\) bytes.*/\1/' | head -n1)
+                    s/^[^:]*:[[:blank:]]*\([0-9]\+\) bytes.*/\1/' | head -n1)
             serial=$(echo "$smartctl" | sed -e '
                 /^Serial/!d;s/^[^:]*:[[:blank:]]*//;s/"//g')
             sedstatus=$(sed_status "$line")

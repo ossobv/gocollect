@@ -19,6 +19,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}, message string) {
 }
 
 func TestParseArgsOrExit_NoOptions(t *testing.T) {
+	os.Args = []string{"prog"}
 	args := parseArgsOrExit()
 	assertEqual(t, args["one-shot"].Bool, false, "")
 	assertEqual(t, args["config"].String, "/etc/gocollect.conf", "")

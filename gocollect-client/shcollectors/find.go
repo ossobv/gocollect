@@ -3,7 +3,6 @@
 package shcollectors
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,14 +23,14 @@ func Find(paths []string) *data.Collectors {
 	for i := range paths {
 		readpath := paths[last-i]
 
-		filelist, e := ioutil.ReadDir(readpath)
+		filelist, e := os.ReadDir(readpath)
 		if e == nil {
-			for _, fileinfo := range filelist {
-				name := fileinfo.Name()
+			for _, direntry := range filelist {
+				name := direntry.Name()
 				// Since we scan the items in reverse order, we only add
 				// the file if it didn't exist yet.
 				if _, exists := ret[name]; !exists {
-					collector := fileToCollector(fileinfo, readpath)
+					collector := fileToCollector(direntry, readpath)
 					if collector != nil {
 						ret[name] = *collector
 					}
@@ -42,9 +41,9 @@ func Find(paths []string) *data.Collectors {
 	return &ret
 }
 
-func fileToCollector(fileinfo os.FileInfo, readpath string) *data.Collector {
+func fileToCollector(direntry os.DirEntry, readpath string) *data.Collector {
 	// Ignore it if it's a directory.
-	if fileinfo.IsDir() {
+	if direntry.IsDir() {
 		return nil
 	}
 
@@ -53,9 +52,9 @@ func fileToCollector(fileinfo os.FileInfo, readpath string) *data.Collector {
 		// Our runner
 		Run: runShellCollector,
 		// Set full path
-		RunArgs: filepath.Join(readpath, fileinfo.Name()),
+		RunArgs: filepath.Join(readpath, direntry.Name()),
 		// If the file is not executable, disable it
-		IsEnabled: isExecutable(fileinfo),
+		IsEnabled: isExecutable(direntry),
 	}
 }
 
@@ -118,12 +117,17 @@ func runShellCollector(key string, execpath string) data.Collected {
 	return ret
 }
 
-func isExecutable(fileinfo os.FileInfo) bool {
-	if fileinfo.IsDir() {
+func isExecutable(direntry os.DirEntry) bool {
+	if direntry.IsDir() {
 		return false
 	}
 
-	mode := fileinfo.Mode()
+	info, err := direntry.Info()
+	if err != nil {
+		return false
+	}
+
+	mode := info.Mode()
 	if (mode & 0111) == 0 {
 		return false
 	}

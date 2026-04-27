@@ -11,6 +11,7 @@ import (
 	"log/syslog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/ossobv/gocollect/gocollect-client/log"
@@ -69,7 +70,8 @@ func getOptionDefinition() getopt.Options {
 				Flags:        (getopt.Optional | getopt.ExampleIsDefault),
 				DefaultValue: defaultConfigFile},
 			{OptionDefinition: "one-shot|s",
-				Description:  "run once and exit",
+				Description: "run once and exit " +
+					"(implied when using --test-key)",
 				Flags:        getopt.Flag,
 				DefaultValue: false},
 			{OptionDefinition: "test-key|k",
@@ -198,13 +200,9 @@ func checkOptionsOrExit(options map[string]getopt.OptionValue) {
 		}
 	}
 
-	// Only allow --test-key with --one-shot.
+	// Using --test-key implies --one-shot.
 	if _, ok := options["test-key"]; ok && !options["one-shot"].Bool {
-		fmt.Fprintf(
-			os.Stderr,
-			"%s: --test-key only works together with --one-shot.\n",
-			filepath.Base(os.Args[0]))
-		os.Exit(1)
+		options["one-shot"] = getopt.OptionValue{Bool: true}
 	}
 }
 
@@ -226,6 +224,22 @@ func createCollectRunner(
 	ret.CollectorsPaths = config["collectors_path"]
 	ret.RegidFilename = defaultRegidFilename
 	ret.GoCollectVersion = versionStr
+
+	// Spool / sampled collector settings.
+	ret.SpoolPath = "/var/spool/gocollect"
+	if vals, ok := config["spool_path"]; ok {
+		ret.SpoolPath = vals[len(vals)-1]
+	}
+	ret.SampledN = 10
+	if vals, ok := config["sampled_n"]; ok {
+		if n, err := strconv.Atoi(vals[len(vals)-1]); err == nil && n > 0 {
+			ret.SampledN = n
+		}
+	}
+	ret.SampledPrefixes = []string{"app."}
+	if vals, ok := config["sampled_prefixes"]; ok {
+		ret.SampledPrefixes = strings.Fields(vals[len(vals)-1])
+	}
 
 	return ret
 }
@@ -250,6 +264,14 @@ func setupLogger(oneShot bool) *golog.Logger {
 	return logger
 }
 
+// minInt() is min() for golang pre-1.21.
+func minInt(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func main() {
 	// Check basic arguments.
 	options := parseArgsOrExit()
@@ -258,14 +280,12 @@ func main() {
 	config := parseConfigOrExit(options["config"].String)
 	// Passed options scan.
 	checkOptionsOrExit(options)
-	// Extract arguments, creating a CollectRunner.
+	// Extract arguments, creating a runner.Runner.
 	collectRunner := createCollectRunner(options, config)
 	runnerinst.SetRunner(&collectRunner)
 	defer runnerinst.SetRunner(nil)
 	// Create and set global logger.
 	log.Log = setupLogger(oneShot)
-	// Use signals to sleep in the main thread.
-	sigHandler := signal.NewAlarmHupUsr1()
 
 	// Do the work in /tmp. In case sub applications want to write cache
 	// files or similar.
@@ -281,33 +301,80 @@ func main() {
 		return
 	}
 
-	// Do complete run.
+	// We're done with stdout.
 	os.Stdout.Close()
-	var interval int
-	last_success := true
-	for {
-		ret := collectRunner.Run()
-		if oneShot {
-			if !ret {
-				log.Log.Fatal("CollectRunner.Run() returned false")
-			}
-			return
-		}
 
-		if ret {
-			// All good, run again in 4 hours
-			interval = 4 * 3600
-			last_success = true
-		} else if last_success {
-			// Retry in 5 minutes if this is the first run
-			interval = 300
-			last_success = false
-		} else {
-			// Keep retrying in larger intervals
-			interval *= 2
-			if interval > (4 * 3600) {
-				// Until we're at max
-				interval = 4 * 3600
+	// One-shot: run everything once (using spool data when available
+	// for sampled collectors) and exit.
+	if oneShot {
+		if !collectRunner.Push() {
+			log.Log.Fatal("collectRunner.Push() returned false")
+		}
+		return
+	}
+
+	// Set up vars and start daemon loop.
+	const fullInterval = 4 * 3600 // 4 hours
+	samplesPerPush := collectRunner.SampledN
+	if samplesPerPush < 1 {
+		samplesPerPush = 1
+	}
+
+	// Sampled collectors (app.*) are sampled every sampleInterval and
+	// their output is written to the spool directory. At push time
+	// (every SampledN samples = fullInterval) Push() reads the mode
+	// (most frequent value) from the spool instead of running them live.
+	// = every sampleInterval
+	//
+	// Non-sampled collectors run live at Push() time.
+	// = once every fullInterval
+	var sampleInterval int = fullInterval / samplesPerPush
+
+	daemonLoop(collectRunner, sampleInterval, samplesPerPush)
+}
+
+// daemonLoop runs forever.
+func daemonLoop(collectRunner runner.Runner,
+	sampleInterval int, samplesPerPush int) {
+	// Use signals to sleep in the main thread.
+	sigHandler := signal.NewAlarmHupUsr1()
+
+	interval := sampleInterval
+	sampleCount := 0
+
+	for {
+		// Sample every iteration, those that need sampling. For
+		// unsampled ones, this is a no-op.
+		collectRunner.Sample()
+		sampleCount++
+
+		// If we have enough samples, we're running for approximately
+		// fullInterval. (Assuming every collector takes negligible time.)
+		log.Log.Printf(
+			"sampleCount %d samplesPerPush %d interval %d\n",
+			sampleCount, samplesPerPush, interval) // XXX
+		if sampleCount >= samplesPerPush {
+			// Push() runs all non-sampled collectors live and takes the
+			// mode from the sampled collectors.
+			ret := collectRunner.Push()
+			if ret {
+				// All is well.
+				sampleCount = 0
+				interval = sampleInterval
+			} else {
+				// retryAttempt: how many pushes have failed so far.
+				retryAttempt := sampleCount - samplesPerPush
+				// While retry interval is lower than the sampleInterval,
+				// we're sampling _faster than usual_.
+				// But that should not be a problem unless the lowest
+				// interval is really low.
+				// Exponential backoff: 300, 600, 1200, ... capped at sampleInterval.
+				// Clamp retryAttempt against integer overflow.
+				interval = 300 * (1 << minInt(retryAttempt, 10)) // max 300k = 3.5 days
+				if interval > sampleInterval {
+					interval = sampleInterval
+				}
+				log.Log.Printf("push failed\n") // XXX
 			}
 		}
 
@@ -316,6 +383,8 @@ func main() {
 		if sig.String() != "alarm clock" {
 			signal.Alarm(0)
 			log.Log.Printf("Got %s to wake up early", sig.String())
+			// Force a push on the next iteration.
+			sampleCount = samplesPerPush
 		}
 	}
 }

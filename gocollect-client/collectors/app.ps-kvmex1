@@ -27,21 +27,18 @@ valtodict() {
 
 echo "["
 n=0
-ps h -o cmd -p $(pidof kvm qemu-kvm qemu-system-x86_64 | tr ' ' ,) \
-        2>/dev/null | while read kvmcmd; do
-    all='*'
+for pid in $(pidof kvm qemu-kvm qemu-system-x86_64); do
+    match_first='*'
     optkey=
-    test $n -gt 0 && echo -n ,
-    n=$((n+1))
     used_keys=()
     n2=0
-    for cmd in $kvmcmd; do
+    while IFS= read -r -d '' cmd; do
         n2=$((n2+1))
         case $cmd in
-        $all)
-            echo -n "{\"argv0\":\"$cmd\""
+        $match_first)
+            echo -n ",{\"argv0\":\"$cmd\""
             bin=$cmd
-            all=
+            match_first=
             ;;
         -*)
             test -n "$optkey" && echo -n ",\"$optkey\":true"
@@ -50,12 +47,17 @@ ps h -o cmd -p $(pidof kvm qemu-kvm qemu-system-x86_64 | tr ' ' ,) \
             used_keys+=($optkey)
             ;;
         *)
-            echo -n ",\"$optkey\":$(valtodict "$cmd")"
+            if [[ "${cmd:0:1}" == "{" ]]; then
+                echo -n ",\"$optkey\":$cmd"
+            else
+                echo -n ",\"$optkey\":$(valtodict "$cmd")"
+            fi
             optkey=
             ;;
         esac
-    done
+    done < /proc/$pid/cmdline || continue 2>/dev/null
+    n=$((n+1))
     test -n "$optkey" && echo -n ",\"$optkey\":true"
-    echo ",\"argv_all\":\"$kvmcmd\"}"
-done
+    echo '}'
+done 2>/dev/null | LC_ALL=C sort | sed -e '1s/^,//'
 echo "]"

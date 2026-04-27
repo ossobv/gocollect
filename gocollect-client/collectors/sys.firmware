@@ -53,6 +53,29 @@ biosinfo=$(getblock 'BIOS Information' "$dmidecode")
 sysinfo=$(getblock 'System Information' "$dmidecode")
 boardinfo=$(getblock 'Base Board Information' "$dmidecode")
 
+get_bmc_version() {
+    # Should produce "1.05.29" after the example below.
+    # Maybe SuperMicro specific.
+    local line
+    local next=false
+    local val
+    # Firmware Revision         : 1.05
+    getkey 'Firmware Revision' "$mcinfo"
+    # Aux Firmware Rev Info     :
+    #     0x29
+    #     0x01
+    #     ...
+    while read -r line; do
+        if $next; then
+            val=$(($line))       # 0x29
+            printf '.%x' "$val"  # printed as ".29"
+            return 0
+        elif [[ "$line" =~ ^Aux\ Firmware\ Rev\ Info[[:blank:]]*: ]]; then
+            next=true
+        fi
+    done <<< "$mcinfo"
+}
+
 mcinfo=
 if command -v ipmitool >/dev/null 2>&1; then
     #modprobe ipmi_msghandler
@@ -68,7 +91,10 @@ fi
 fwupdatesjs=
 if command -v fwupdmgr >/dev/null; then
     # Do we also want to get 'fwupdmgr security' later as well?
-    fwupdatesjs=$(fwupdmgr --json get-devices 2>/dev/null)
+    # The "Devices" all have a "Created" that gets updated timestamps. We do
+    # not want fluctuating data, so replace with 0.
+    fwupdatesjs=$(fwupdmgr --json get-devices 2>/dev/null |
+        sed -e 's/\("Created"[[:blank:]]*\):[[:blank:]]*[0-9]\+/\1:0/')
     if [[ "$fwupdatesjs" != '{'* ]]; then
         fwupdatesjs=
     fi
@@ -98,7 +124,7 @@ cat << EOF
     "bmc": {
         "manufacturer": "$(getkey 'Manufacturer Name' "$mcinfo")",
         "product": "$(getkey 'Product Name' "$mcinfo")",
-        "version": "$(getkey 'Firmware Revision' "$mcinfo")",
+        "version": "$(get_bmc_version)",
         "devicerev": "$(getkey 'Device Revision' "$mcinfo")",
         "ipmiver": "$(getkey 'IPMI Version' "$mcinfo")"
     },

@@ -8,12 +8,12 @@ lines2js() {
         {gsub("\"","");gsub("\\\\","");if(NR>1)printf ",";print "\"" $0 "\""}'
 }
 
-if command -v psdiff >/dev/null; then
-    echo '{"psdiff.dump":{"filelines":['
-    psdiff --net dump | lines2js
-    if test -f /var/lib/psdiff.db; then
-        echo ']},"psdiff.db":{"filelines":['
-        lines2js < /var/lib/psdiff.db
+if command -v fwdiff >/dev/null; then
+    echo '{"fwdiff.dump":{"filelines":['
+    fwdiff dump 2>/dev/null | lines2js
+    if test -f /var/lib/fwdiff.db; then
+        echo ']},"fwdiff.db":{"filelines":['
+        lines2js < /var/lib/fwdiff.db
     fi
     echo ']}}'
 else

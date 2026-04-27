@@ -537,7 +537,18 @@ class BaseResource:
 
     def assign_ip_address(self, interface_id, ip, dry_run):
         if ip.ip == ip.network:
-            log.debug('%s cannot assign network ID %s to interface', self, ip)
+            if ip.version == 4 and ip.prefixlen not in (31, 32):
+                log.debug(
+                    '%s cannot assign network ID %s to interface', self, ip)
+                return
+            elif ip.version == 6 and ip.prefixlen not in (127, 128):
+                log.debug(
+                    '%s cannot assign network ID %s to interface', self, ip)
+                return
+        if (ip.ip == ip.broadcast and ip.version == 4
+                and ip.prefixlen not in (31, 32)):
+            log.debug(
+                '%s cannot assign network broadcast %s to interface', self, ip)
             return
 
         addresses = []

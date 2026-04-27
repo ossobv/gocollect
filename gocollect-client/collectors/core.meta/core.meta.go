@@ -4,6 +4,7 @@ package builtincollector
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -74,14 +75,14 @@ func getYamlData(filespath string) (map[string]interface{}, error) {
 
 	// ReadDir reads the directory named by dirname and returns a list
 	// of directory entries sorted by filename.
-	filelist, err := ioutil.ReadDir(filespath)
+	filelist, err := os.ReadDir(filespath)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, fileinfo := range filelist {
-		if fileinfo.IsDir() {
-			name := fileinfo.Name()
+	for _, direntry := range filelist {
+		name := direntry.Name()
+		if direntry.IsDir() {
 			if !strings.HasPrefix(name, ".") {
 				subpath := sanejoin.Join(filespath, name)
 				data, err := getYamlData(subpath)
@@ -93,7 +94,6 @@ func getYamlData(filespath string) (map[string]interface{}, error) {
 				}
 			}
 		} else {
-			name := fileinfo.Name()
 			if !strings.HasPrefix(name, ".") &&
 				strings.HasSuffix(name, ".yaml") {
 				fullpath := filepath.Join(filespath, name)

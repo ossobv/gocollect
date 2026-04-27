@@ -1,5 +1,5 @@
 // Package runner (gocollect) is the core of the GoCollect daemon. The
-// Run() method will do the collecting and submitting to the central
+// Push() method will do the collecting and submitting to the central
 // server.
 package runner
 
@@ -8,10 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ossobv/gocollect/gocollect-client/data"
 	"github.com/ossobv/gocollect/gocollect-client/log"
 	"github.com/ossobv/gocollect/gocollect-client/shcollectors"
+	"github.com/ossobv/gocollect/gocollect-client/spool"
 )
 
 type runInfo struct {
@@ -33,6 +35,38 @@ func newRunInfo(r *Runner) (ri runInfo) {
 	ri.collectors = data.MergeCollectors(
 		&data.BuiltinCollectors, shcollectors.Find(r.CollectorsPaths))
 	return ri
+}
+
+// isSampled reports whether key is a sampled collector whose output
+// should be spooled rather than run fresh on every push.
+func (ri *runInfo) isSampled(key string) bool {
+	if ri.runner.SpoolPath == "" || len(ri.runner.SampledPrefixes) == 0 {
+		return false
+	}
+	for _, prefix := range ri.runner.SampledPrefixes {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// sampleCollectors runs all sampled collectors and saves their output to
+// the spool directory.
+func (ri *runInfo) sampleCollectors() {
+	for _, key := range ri.collectors.GetRunnable() {
+		if !ri.isSampled(key) {
+			continue
+		}
+		collected := ri.collectors.Run(key)
+		if collected == nil || collected.IsEmpty() {
+			continue
+		}
+		if err := spool.Save(ri.runner.SpoolPath, key, collected,
+			ri.runner.SampledN); err != nil {
+			log.Log.Printf("spool[%s]: save error: %s", key, err)
+		}
+	}
 }
 
 func (ri *runInfo) setCoreIDData() bool {
@@ -87,8 +121,16 @@ func (ri *runInfo) runAll() runStatus {
 	// Run all collectors and push.
 	extraContext := map[string]string{"_collector": "<value>"}
 	for _, collectorKey := range ri.collectors.GetRunnable() {
-		// Run a (patched) collector.
-		collected := ri.runCollector(collectorKey)
+		// For sampled collectors use the spool mode; fall back to a
+		// live run only when no spool data exists yet.
+		var collected data.Collected
+		if ri.isSampled(collectorKey) {
+			collected = spool.LoadMode(
+				ri.runner.SpoolPath, collectorKey, ri.runner.SampledN)
+		}
+		if collected == nil {
+			collected = ri.runCollector(collectorKey)
+		}
 		if collected == nil {
 			// logger.Printf(
 			//     "collector[%s]: exec fail", collectorKey)
@@ -110,7 +152,7 @@ func (ri *runInfo) runAll() runStatus {
 			break
 		}
 
-		collectors += 1
+		collectors++
 	}
 
 	return ret

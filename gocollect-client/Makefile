@@ -3,7 +3,6 @@
 prefix = /usr
 
 SOURCES = $(shell find . -name '*.go' -type f | sort)
-GODIRS = $(shell find . -name '*.go' -type f | sed -e 's:/[^/]*.go$$::' | sort -u)
 SHCOLLECTORS = $(shell find collectors/ -maxdepth 1 -name '[a-z]*.*' -type f -perm /700 '!' -name '*.*.*' | sort)
 # Debian version spec says:
 # - tilde sorts before anything, so ~rc1 sorts before final
@@ -23,7 +22,7 @@ clean:
 	$(RM) gocollect
 
 gocollect: $(SOURCES)
-	go build $(GOFLAGS) $(GOLDFLAGS) gocollect.go
+	go build -o gocollect $(GOFLAGS) $(GOLDFLAGS) .
 	if ldd gocollect | grep '=>'; then echo "ERROR: static linkage failed" >&2; \
 		$(RM) gocollect; false; fi
 
@@ -140,16 +139,15 @@ gocollect-$(TGZ_VERSION).tar.gz: gocollect-bin
 .PHONY: check pretty testrun
 testrun: gocollect-bin
 	#GOTRACEBACK=system strace -tt -fbexecve ./gocollect -c gocollect-test.conf
-	sudo env GOPATH=$$GOPATH GOTRACEBACK=system ./gocollect -c gocollect-test.conf
+	sudo env GOTRACEBACK=system ./gocollect -c gocollect-test.conf
 
 check: pretty
-	for d in $(GODIRS); do (cd $$d && go test); done
+	go test ./...
 
 pretty:
 	git ls-files | grep '\.go$$' | while read x; do gofmt -d "$$x" | patch $$x; done
-	for d in $(GODIRS); do golint $$d && (cd $$d && go vet); done
+	golint ./... && go vet ./...
 
 # .PHONY: fetch-new-package
 # fetch-new-package:
-# 	# Be sure to set GOPATH; see ./gorc.
-# 	go get github.com/XXX
+# 	go get github.com/XXX@latest
