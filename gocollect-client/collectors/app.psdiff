@@ -3,8 +3,19 @@
 # REQUIRES: awk(awk)
 # NOTE: Remember to test changes with mawk(1).
 
-test -f /var/lib/psdiff.db && exec awk '
-  BEGIN{print "{\"psdiff.db\":{\"filelines\":["}
-  {gsub("\\\"","");gsub("\\\\","");if(NR>1)printf ",";print "\"" $0 "\"" }
-  END{print "]}}"}' < /var/lib/psdiff.db
-echo '{}'
+lines2js() {
+    awk '
+        {gsub("\"","");gsub("\\\\","");if(NR>1)printf ",";print "\"" $0 "\""}'
+}
+
+if command -v psdiff >/dev/null; then
+    echo '{"psdiff.dump":{"filelines":['
+    psdiff --net dump | lines2js
+    if test -f /var/lib/psdiff.db; then
+        echo ']},"psdiff.db":{"filelines":['
+        lines2js < /var/lib/psdiff.db
+    fi
+    echo ']}}'
+else
+    echo '{}'
+fi
