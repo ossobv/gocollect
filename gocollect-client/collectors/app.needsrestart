@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""
+gocollect collector: app.needsrestart
+
+Reports packages that need a restart (i.e. they are not up to date),
+systemd services that need a restart (i.e. they are either not up to date, or
+they are using old libraries; see previous). Also reports other executables
+which cannot be pinpointed to a systemd service.
+
+This is used as part of the custom authenticated scanning implementation.
+
+Output might look like:
+
+    {
+      // Packages that we cannot "trust" to be up to date yet.
+      "apt_packages": [
+        "gocollect",
+        "libcap2",
+        "libpam-cap"
+      ],
+      // Local services that will need some kind of restart.
+      "systemd_services": [
+        "dnsmasq.service",
+        "docker.service",
+        "fwupd.service",
+        "gocollect.service",
+        "lldpd.service"
+      ],
+      // Not found by 'systemd status PID'. Could be in LXC or other namespace
+      "other_executables": [
+        "/usr/bin/dockerd",
+        "/usr/bin/sudo",
+        "/usr/lib/postgresql/14/bin/postgres"
+      ]
+    }
+"""
+import sys
+from json import dumps as json_dumps
+from os import geteuid, listdir, readlink, stat
+from subprocess import SubprocessError, check_output
+
+
+class Process:
+    __slots__ = ('pid', 'exe', 'deleted', '_systemd_service')
+    FILE_PACKAGES = {}  # (devid, file) => some-apt-package
+
+    @classmethod
+    def get_all(cls):
+        for entry in listdir('/proc'):
+            if entry.isdigit():
+                yield cls.from_pid(entry)
+
+    @classmethod
+    def from_pid(cls, pid):
+        return cls(pid)
+
+    def __init__(self, pid):
+        self.pid = pid
+        try:
+            self.exe = readlink(f'/proc/{pid}/exe')
+        except OSError:
+            self.exe = None
+            return
+
+        self.deleted = set()
+        if self.exe.endswith(' (deleted)'):
+            self.exe = self.exe[0:-10]
+            self.deleted.add(self.exe)
+
+        # Check proc maps. All of them.
+        try:
+            with open(f'/proc/{pid}/maps') as fp:
+                for line in fp:
+                    line = line.rstrip()
+                    if not line.endswith(' (deleted)'):
+                        continue
+                    # format: addr perms offset dev inode pathname
+                    parts = line.split(None, 5)
+                    if len(parts) >= 6:
+                        path = parts[5]
+                        assert path.endswith(' (deleted)'), path
+                        path = path[0:-10]
+                        if (path.startswith('/')
+                                and (path.endswith('.so') or '.so.' in path)):
+                            self.deleted.add(path)
+        except OSError:
+            self.exe = None
+
+        self._systemd_service = None
+
+    @staticmethod
+    def _usrmerge_options(path):
+        # After usrmerge some package have files in /lib while they are
+        # accessed as /usr/lib.
+        if path.startswith('/usr/'):
+            return (path, path[4:])
+        return (path,)
+
+    @property
+    def packages_needing_restart(self):
+        """Return apt packages for deleted executable files."""
+        packages = set()
+
+        # Rightfully assume that places where /var/lib/dpkg has the same
+        # filesystem, the library we're looking for has the same filesystem as
+        # well.
+        dpkg_path = f'/proc/{self.pid}/root/var/lib/dpkg'
+        try:
+            st = stat(dpkg_path)
+        except OSError:
+            return packages
+        devid = st.st_dev
+
+        for deleted in self.deleted:
+            for exe in self._usrmerge_options(deleted):
+                if (devid, exe) in self.FILE_PACKAGES:
+                    packages.add(self.FILE_PACKAGES[(devid, exe)])
+                    break
+
+                try:
+                    with open('/dev/null', 'w') as DEVNULL:
+                        result = check_output(
+                            ('dpkg', f'--admindir={dpkg_path}', '-S', exe),
+                            stderr=DEVNULL, timeout=15, env={'LC_ALL': 'C'})
+                except (SubprocessError, FileNotFoundError):
+                    pass
+                else:
+                    # Ex: systemd-timesyncd: /usr/lib/systemd/systemd-timesyncd
+                    lines = result.decode('utf-8', 'replace').split('\n')
+                    lines = [
+                        line for line in lines if line.endswith(f': {exe}')]
+                    if lines:
+                        pkg = sorted(lines)[0].split(':', 1)[0]
+                        packages.add(pkg)
+                        self.FILE_PACKAGES[(devid, exe)] = pkg
+                        break
+
+        return list(packages)
+
+    @property
+    def systemd_service(self):
+        """Return systemd unit name for pid, or None."""
+        if self._systemd_service is None:
+            try:
+                with open('/dev/null', 'w') as DEVNULL:
+                    result = check_output(
+                        ('systemctl', 'status', str(self.pid)),
+                        stderr=DEVNULL, timeout=15, env={'LC_ALL': 'C'})
+            except (SubprocessError, FileNotFoundError):
+                return None
+
+            service = (
+                result.decode('utf-8', 'replace')
+                .split('\n', 1)[0][2:].split(' - ', 1)[0])
+            if service.endswith('.service'):
+                self._systemd_service = service
+            else:
+                self._systemd_service = False
+        return self._systemd_service
+
+
+def collect():
+    packages_needing_restart = set()
+    services_needing_restart = set()
+    unknown_needing_restart = set()
+
+    for process in Process.get_all():
+        if not process.exe or not process.deleted:
+            continue
+
+        packages_needing_restart.update(process.packages_needing_restart)
+
+        if process.systemd_service:
+            services_needing_restart.add(process.systemd_service)
+        else:
+            unknown_needing_restart.add(process.exe)
+
+    return {
+        'apt_packages': sorted(packages_needing_restart),
+        'systemd_services': sorted(services_needing_restart),
+        'other_executables': sorted(unknown_needing_restart),
+    }
+
+
+def main():
+    if geteuid() != 0:
+        print('warning: running without root; /proc entries may be unreadable',
+              file=sys.stderr)
+
+    print(json_dumps(collect()))
+
+
+if __name__ == '__main__':
+    main()

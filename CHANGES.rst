@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.9.10 [2026-04-27]:
+
+  - app.needsrestart: New collector to find unrestarted libs/bins
+  - app.ossochange: New collector to fetch change tickets
+
 * v0.9.9 [2026-04-27]:
 
   - core: Add stable-collector spool/mode feature for app.* collectors
