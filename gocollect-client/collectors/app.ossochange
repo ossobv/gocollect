@@ -1,0 +1,14 @@
+#!/bin/sh
+# vim: set ts=8 sw=4 sts=4 et ai:
+# LABELS: optional
+# REQUIRES: jq(jq)
+# REQUIRES: sed(sed)
+# REQUIRES: systemd(journalctl)
+
+if command -v journalctl >/dev/null && command -v jq >/dev/null; then
+    journalctl -t osso-change -S '-1 day' -o cat | jq -s "\
+        map(select(.action==\"workon\" and .ticket) | .ticket) \
+        | unique | {tickets: .}" 2>/dev/null
+else
+    echo '{}'
+fi
