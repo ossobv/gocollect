@@ -1,3 +1,19 @@
+gocollect (0.9.9-1) stable; urgency=medium
+
+  * New upstream release:
+    - core: Add stable-collector spool/mode feature for app.* collectors
+    - core: gocollect -k (--test-keys) now implies -s (--one-shot)
+    - app.psdiff: Add psdiff.dump next to psdiff.db
+    - app.ps-kvmex1: Do not die on new JSON kvm args
+    - os.keys: Fix so sshd_config Includes are read for ssh key location
+    - os.uptime: Fix fluctuating uptime
+    - sys.firmware: Add microversion to bmc.version
+    - sys.firmware: Fix fluctuating Created args
+    - sys.storage: Correctly show logical sector size for non-nvme
+  * Update build method without go get.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Mon, 27 Apr 2026 08:41:21 +0200
+
 gocollect (0.9.8-1) stable; urgency=medium
 
   * New upstream release:

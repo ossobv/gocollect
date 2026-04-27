@@ -15,8 +15,6 @@ THISGOPATH := $(CURDIR)/../../../..# GOPATH/src/github.com/org/repo
 override_dh_auto_build:
 	# If we don't have them, download the packages to TEMP.
 	# This package should be referenced from here though.
-	GOPATH=$(TEMPGOPATH):$(THISGOPATH) go get github.com/ossobv/go-getopt
-	GOPATH=$(TEMPGOPATH):$(THISGOPATH) go get github.com/ghodss/yaml
 	GOPATH=$(THISGOPATH):$(TEMPGOPATH) dh_auto_build
 
 override_dh_auto_install:
