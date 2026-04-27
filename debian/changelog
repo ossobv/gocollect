@@ -1,3 +1,11 @@
+gocollect (0.9.10-1) stable; urgency=medium
+
+  * New upstream release:
+    - app.needsrestart: New collector to find unrestarted libs/bins
+    - app.ossochange: New collector to fetch change tickets
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Mon, 27 Apr 2026 13:54:04 +0200
+
 gocollect (0.9.9-1) stable; urgency=medium
 
   * New upstream release:
