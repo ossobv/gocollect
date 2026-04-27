@@ -1,10 +1,10 @@
 // Package runner (gocollect) is the core of the GoCollect daemon. The
-// Run() method will do the collecting and submitting to the central
+// Push() method will do the collecting and submitting to the central
 // server.
 package runner
 
 // Runner holds everything we need for gocollect action. Set all fields
-// to a valid value before calling Run().
+// to a valid value before calling Push().
 type Runner struct {
 	ConfigPathBase   string
 	RegisterURL      string
@@ -13,11 +13,20 @@ type Runner struct {
 	CollectorsPaths  []string
 	RegidFilename    string
 	GoCollectVersion string
+
+	// Sampled collector (spool) settings.
+	// Collectors whose name starts with any SampledPrefixes are sampled via
+	// Sample() and stored in SpoolPath. Push() then pushes the mode
+	// (most frequent value) from the last SampledN snapshots instead of
+	// a fresh run. Set SpoolPath to "" to disable spool behaviour.
+	SpoolPath       string
+	SampledN        int
+	SampledPrefixes []string
 }
 
-// Run collects data from the collectors and pushes data to the central
+// Push collects data from the collectors and pushes data to the central
 // server. If needed, it registers first.
-func (r *Runner) Run() bool {
+func (r *Runner) Push() bool {
 	runner := newRunInfo(r)
 
 	// Initialize HTTP calls.
@@ -41,6 +50,16 @@ func (r *Runner) Run() bool {
 		return false
 	}
 	return true
+}
+
+// Sample runs all sampled collectors (those matching SampledPrefixes) and
+// saves each output to SpoolPath. It is a no-op when SpoolPath is empty.
+func (r *Runner) Sample() {
+	if r.SpoolPath == "" {
+		return
+	}
+	runner := newRunInfo(r)
+	runner.sampleCollectors()
 }
 
 // Get collects data from a single collector and returns it as a string.
