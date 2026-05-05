@@ -1,11 +1,13 @@
-FROM ubuntu:focal
+FROM ubuntu:noble
 
 RUN apt-get update -q && \
     apt-get install -qqy --no-install-recommends \
-      python3-dev python3-pip libffi-dev libssl-dev
+      python3-netaddr python3-pika python3-requests && \
+    apt-get clean && \
+    rm -rf /var/cache/apt /var/lib/apt
 
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+# COPY requirements.txt /tmp/requirements.txt
+# RUN pip install --break-system-packages -r /tmp/requirements.txt
 
 RUN mkdir -p /app /srv/gocollect-data
 WORKDIR /app
