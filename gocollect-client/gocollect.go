@@ -372,7 +372,7 @@ func daemonLoop(collectRunner runner.Runner,
 					interval = sampleInterval
 				}
 				log.Log.Printf(
-					"push failed, count %d, retry +%d\n",
+					"push failed, count %d, retry +%d",
 					sampleCount, interval)
 			}
 		}
