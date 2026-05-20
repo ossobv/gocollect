@@ -1,6 +1,13 @@
 Changes
 -------
 
+* v0.9.11 [2026-05-20]:
+
+  - core: Fix so we push at gocollect startup (like before). In the
+    previous version, the first push was first after a complete stable run
+    (N collects), or after a SIGHUP/SIGUSR1. Now os.uptime and os.kernel
+    will show updates immediately again.
+
 * v0.9.10 [2026-04-27]:
 
   - app.needsrestart: New collector to find unrestarted libs/bins
