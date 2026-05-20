@@ -1,3 +1,13 @@
+gocollect (0.9.11-1) stable; urgency=medium
+
+  * New upstream release:
+    - core: Fix so we push at gocollect startup (like before). In the
+      previous version, the first push was first after a complete stable run
+      (N collects), or after a SIGHUP/SIGUSR1. Now os.uptime and os.kernel
+      will show updates immediately again.
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Wed, 20 May 2026 20:13:18 +0200
+
 gocollect (0.9.10-1) stable; urgency=medium
 
   * New upstream release:
