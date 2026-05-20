@@ -898,7 +898,7 @@ def main():
         rmq_url.username, rmq_url.password)
 
     parameters = pika.ConnectionParameters(
-        host=rmq_url.host, heartbeat_interval=10, virtual_host=rmq_url.vhost,
+        host=rmq_url.host, heartbeat=10, virtual_host=rmq_url.vhost,
         credentials=credentials)
 
     consumer = RMQConsumer(

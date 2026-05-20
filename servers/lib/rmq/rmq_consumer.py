@@ -22,8 +22,7 @@ class RMQConsumer(object):
         logger.info('Connecting to %s', self._parameters)
         return pika.SelectConnection(
             parameters=self._parameters,
-            on_open_callback=self.on_connection_open,
-            stop_ioloop_on_close=False)
+            on_open_callback=self.on_connection_open)
 
     def on_connection_open(self, unused_connection):
         logger.info('Connection opened')
@@ -34,14 +33,13 @@ class RMQConsumer(object):
         logger.info('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
 
-    def on_connection_closed(self, connection, reply_code, reply_text):
+    def on_connection_closed(self, connection, reason):
         self._channel = None
         if self._closing:
             self._connection.ioloop.stop()
         else:
             logger.warning(
-                'Connection closed, reopening in 5 seconds: (%s) %s',
-                reply_code, reply_text)
+                'Connection closed, reopening in 5 seconds: %s', reason)
             self._connection.add_timeout(5, self.reconnect)
 
     def reconnect(self):
@@ -71,9 +69,8 @@ class RMQConsumer(object):
         logger.info('Adding channel close callback')
         self._channel.add_on_close_callback(self.on_channel_closed)
 
-    def on_channel_closed(self, channel, reply_code, reply_text):
-        logger.warning('Channel %i was closed: (%s) %s',
-                       channel, reply_code, reply_text)
+    def on_channel_closed(self, channel, reason):
+        logger.warning('Channel %i was closed: %s', channel, reason)
         self._connection.close()
 
     def setup_exchange(self, exchange_name):
@@ -86,8 +83,8 @@ class RMQConsumer(object):
     def setup_queue(self):
         logger.info('Declaring queue')
         self._channel.queue_declare(
-            self.on_queue_declareok,
             queue=self._queue,
+            callback=self.on_queue_declareok,
             durable=True,
             exclusive=False)
 
@@ -98,10 +95,10 @@ class RMQConsumer(object):
             self._queue, self._routing_key)
 
         self._channel.queue_bind(
-            self.on_bindok,
-            exchange=self._exchange_name,
             queue=self._queue,
-            routing_key=self._routing_key)
+            exchange=self._exchange_name,
+            routing_key=self._routing_key,
+            callback=self.on_bindok)
 
     def on_bindok(self, unused_frame):
         logger.info('Queue bound')
@@ -110,7 +107,8 @@ class RMQConsumer(object):
     def start_consuming(self):
         self.add_on_cancel_callback()
         self._consumer_tag = self._channel.basic_consume(
-            self.on_message, self._queue)
+            queue=self._queue,
+            on_message_callback=self.on_message)
         logger.info('Ready for consuming')
 
     def add_on_cancel_callback(self):
@@ -139,7 +137,9 @@ class RMQConsumer(object):
     def stop_consuming(self):
         if self._channel:
             logger.info('Sending a Basic.Cancel RPC command to RabbitMQ')
-            self._channel.basic_cancel(self.on_cancelok, self._consumer_tag)
+            self._channel.basic_cancel(
+                consumer_tag=self._consumer_tag,
+                callback=self.on_cancelok)
 
     def on_cancelok(self, unused_frame):
         logger.info('RabbitMQ acknowledged the cancellation of the consumer')

@@ -7,7 +7,7 @@ class DirectoryMixin(object):
     # TODO: Remove the GOCOLLECT_DATADIR from env here..
     # DATADIR = os.path.abspath(os.path.dirname(sys.argv[0]))
     DATADIR = os.environ.get('GOCOLLECT_DATADIR', '/srv/gocollect-data')
-    DIRMODE = 0o0700
+    DIRMODE = 0o0750  # readable by group
 
     def makedirs(self, dir_):
         try:

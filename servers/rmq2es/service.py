@@ -148,7 +148,7 @@ def main():
         uri.username, uri.password)
 
     parameters = pika.ConnectionParameters(
-        host=uri.host, heartbeat_interval=10, virtual_host=uri.vhost,
+        host=uri.host, heartbeat=10, virtual_host=uri.vhost,
         credentials=credentials)
 
     storage = Storage(es_uri)

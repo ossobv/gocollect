@@ -340,19 +340,16 @@ func daemonLoop(collectRunner runner.Runner,
 	sigHandler := signal.NewAlarmHupUsr1()
 
 	interval := sampleInterval
-	sampleCount := 0
+	// We want to run immediately after startup (e.g. after boot).
+	sampleCount := samplesPerPush
 
 	for {
 		// Sample every iteration, those that need sampling. For
 		// unsampled ones, this is a no-op.
 		collectRunner.Sample()
-		sampleCount++
 
 		// If we have enough samples, we're running for approximately
 		// fullInterval. (Assuming every collector takes negligible time.)
-		log.Log.Printf(
-			"sampleCount %d samplesPerPush %d interval %d\n",
-			sampleCount, samplesPerPush, interval) // XXX
 		if sampleCount >= samplesPerPush {
 			// Push() runs all non-sampled collectors live and takes the
 			// mode from the sampled collectors.
@@ -374,17 +371,22 @@ func daemonLoop(collectRunner runner.Runner,
 				if interval > sampleInterval {
 					interval = sampleInterval
 				}
-				log.Log.Printf("push failed\n") // XXX
+				log.Log.Printf(
+					"push failed, count %d, retry +%d",
+					sampleCount, interval)
 			}
 		}
 
 		signal.Alarm(interval)
 		sig := <-sigHandler.Chan // wait for SIGALRM or SIGHUP or SIGUSR1
-		if sig.String() != "alarm clock" {
+		if sig.String() == "alarm clock" {
+			// SIGALARM, add one to the count.
+			sampleCount++
+		} else {
+			// SIGHUP/SIGUSR1, force immediate push.
+			sampleCount = samplesPerPush
 			signal.Alarm(0)
 			log.Log.Printf("Got %s to wake up early", sig.String())
-			// Force a push on the next iteration.
-			sampleCount = samplesPerPush
 		}
 	}
 }

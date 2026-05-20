@@ -9,6 +9,8 @@ from .directory_mixin import DirectoryMixin
 
 
 class Collector(DirectoryMixin):
+    FILEMODE = 0o0640  # readable by group
+
     def __init__(self, regid, collectkey, seenip, data):
         self.regid = regid
         self.collectkey = collectkey
@@ -35,6 +37,7 @@ class Collector(DirectoryMixin):
             os.unlink(temp.name)
             raise
 
+        os.fchmod(temp.fileno(), self.FILEMODE)
         return temp.name
 
     def collect(self):
