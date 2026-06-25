@@ -637,7 +637,7 @@ class BaseResource:
         else:
             interface = self.netbox.post(self.interface_url, json={
                 'name': self.bmc_interface,
-                self.param: self.obj['id'],
+                self.attr: self.obj['id'],
                 'mac_address': data['MAC Address'].upper() or None,
                 'type': self.bmc_type,
                 'mgmt_only': True,
