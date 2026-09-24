@@ -1,3 +1,10 @@
+gocollect (0.9.12-1) stable; urgency=medium
+
+  * New upstream release:
+    - os.network: Do not list IPs in the MAC address field
+
+ -- Walter Doekes (work) <wjdoekes@osso.nl>  Thu, 24 Sep 2026 15:54:26 +0200
+
 gocollect (0.9.11-1) stable; urgency=medium
 
   * New upstream release:
