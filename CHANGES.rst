@@ -1,6 +1,11 @@
 Changes
 -------
 
+* v0.9.12 [2026-09-24]:
+
+  - os.network: Do not list MAC addresses in IP fields. (Seen in certain
+    ipsec contexts.)
+
 * v0.9.11 [2026-05-20]:
 
   - core: Fix so we push at gocollect startup (like before). In the
