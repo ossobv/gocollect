@@ -27,7 +27,9 @@ ip link | sed -e '/^[[:blank:]]/d;s/://g;s/ <.*//' | while read line; do
     index=$(echo "$line" | cut -d' ' -f1)
     name=$(echo "$line" | cut -d' ' -f2)
     namenoat=${name%%@*}
-    mac=$(ip link show dev $namenoat | sed -ne 's/^[[:blank:]]*link\/[^ ]* \([^ ]*\).*/\1/p')
+    # For "link/loopback" and "link/ether" we can use the hardware address as MAC.
+    # For "link/ipip" we cannot, as it shows an IP.
+    mac=$(ip link show dev $namenoat | sed -ne 's/^[[:blank:]]*link\/\(ether\|loopback\) \([^ ]*\).*/\2/p')
     echo -n "\"${name%:}\":{\"index\":${index%:},\"mac\":\"$mac\""
     append_addresses $namenoat ip4 inet
     append_addresses $namenoat ip6 inet6
