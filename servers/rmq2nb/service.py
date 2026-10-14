@@ -781,30 +781,34 @@ class Storage(object):
 
     def store(self, regid, collectkey, data):
         obj = self.get_resource(regid)
-        if obj is None and collectkey == CORE_ID:
-            if self.is_allowed_name(data['fqdn']):
-                # Need core.id to create the object.
-                self.create_resource(data)
-            else:
-                log.debug(
-                    'Ignoring %s:%s name %s is not allowed',
-                    regid, collectkey, data['fqdn'])
-        elif not self.is_allowed_name(str(obj)):
+        if obj is None:
+            if collectkey == CORE_ID:
+                if self.is_allowed_name(data['fqdn']):
+                    # Need core.id to create the object.
+                    self.create_resource(data)
+                else:
+                    log.debug(
+                        'Ignoring %s:%s name %s is not allowed',
+                        regid, collectkey, data['fqdn'])
+            return
+
+        if not self.is_allowed_name(obj.obj['name']):
             log.debug(
                 'Ignoring %s:%s name %s is not allowed',
-                regid, collectkey, obj)
-        elif obj is not None:
-            log.info(
-                'Updating %s:%s on %s %s', regid, collectkey, obj,
-                obj.obj['url'])
-            if collectkey == CORE_ID:
-                obj.update(data, dry_run=bool(CORE_ID in self.dry_run))
-            elif collectkey == OS_NETWORK:
-                obj.sync_interfaces(
-                    data, dry_run=bool(OS_NETWORK in self.dry_run))
-            elif collectkey == SYS_IPMI:
-                obj.create_or_update_ipmi(
-                    data, dry_run=bool(SYS_IPMI in self.dry_run))
+                regid, collectkey, obj.obj['name'])
+            return
+
+        log.info(
+            'Updating %s:%s on %s %s', regid, collectkey, obj,
+            obj.obj['url'])
+        if collectkey == CORE_ID:
+            obj.update(data, dry_run=bool(CORE_ID in self.dry_run))
+        elif collectkey == OS_NETWORK:
+            obj.sync_interfaces(
+                data, dry_run=bool(OS_NETWORK in self.dry_run))
+        elif collectkey == SYS_IPMI:
+            obj.create_or_update_ipmi(
+                data, dry_run=bool(SYS_IPMI in self.dry_run))
 
     def is_allowed_name(self, name):
         for candidate, is_allowed in self.names_allowed:
