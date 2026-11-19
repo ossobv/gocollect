@@ -122,9 +122,9 @@ class RMQConsumer(object):
             self._channel.close()
 
     def on_message(self, ch, method, properties, body):
-        # logger.info(
-        #     'Received message # %s from %s',
-        #     method.delivery_tag, properties.app_id)
+        logger.debug(
+            'Received message # %s from %s: %r (maybe trunc)',
+            method.delivery_tag, properties.app_id, body[0:100])
         if self._callback:
             self._callback(ch, method, properties, body)
         self.acknowledge_message(method.delivery_tag)

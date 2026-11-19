@@ -7,7 +7,7 @@ from lib.handlers.directory.collector import Collector
 from lib.envparse import rmq_uri
 from lib.rmq.rmq_consumer import RMQConsumer
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=environ.get('RMQ2FILE_LOGLEVEL', 'INFO').upper())
 logger = logging.getLogger(__name__)
 
 

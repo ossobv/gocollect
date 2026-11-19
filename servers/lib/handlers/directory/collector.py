@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import tempfile
 from datetime import datetime
@@ -6,6 +7,8 @@ from datetime import datetime
 from lib.file import file_is_equal
 
 from .directory_mixin import DirectoryMixin
+
+logger = logging.getLogger(__name__)
 
 
 class Collector(DirectoryMixin):
@@ -54,6 +57,7 @@ class Collector(DirectoryMixin):
                 # Is filedata equal?
                 lastfile = os.path.join(datadir, allfiles[0])
                 if file_is_equal(tempname, lastfile):
+                    logger.debug('%s unchanged', lastfile)
                     os.utime(lastfile, None)  # touch time stamp
                     return
 
@@ -62,6 +66,7 @@ class Collector(DirectoryMixin):
             newfile = os.path.join(
                 datadir, datetime.now().strftime('%Y-%m-%d_%H:%M'))
             os.rename(tempname, newfile)
+            logger.debug('%s changed', newfile)
             tempname = None
 
             # Fix symlink to new file.

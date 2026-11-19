@@ -22,6 +22,7 @@ Place this in ``/etc/docker/containers.d/gocollect-srv-rmq2file.conf``::
     ARGS="-v /srv/gocollect-data:/srv/gocollect-data:rw \
       -e RMQ2FILE_QUEUE_URI=rmq://user:pass@host/vhost/exchange/queue \
       -e RMQ2FILE_COLLECTOR_PATH=/srv/gocollect-data \
+      -e RMQ2FILE_LOGLEVEL=INFO \
       gocollect-srv:latest rmq2file"
 
 And use the following *Systemd* template service as
