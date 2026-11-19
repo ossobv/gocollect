@@ -1,3 +1,2 @@
 pika>=1.0.0
 requests>=2.33.0
-netaddr>=0.8.0

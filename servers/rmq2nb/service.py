@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from ipaddress import ip_interface
 import itertools
 import json
 import logging
@@ -8,7 +9,6 @@ from urllib.parse import urljoin, urlparse
 import re
 import sys
 
-from netaddr import IPNetwork
 from requests import Session
 from requests.adapters import HTTPAdapter
 
@@ -19,8 +19,6 @@ from lib.rmq.rmq_consumer import RMQConsumer
 logging.getLogger('pika').setLevel(logging.ERROR)
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
-
-IPV6_LOOPBACK = IPNetwork('::1/128')
 
 ALL_KEYS = 'all'
 CORE_ID = 'core.id'
@@ -502,7 +500,7 @@ class BaseResource:
                 'mac_address': iface['mac'].upper() or None,
                 'parent': parent,
                 'type': iface_type,
-                'ip': [IPNetwork(f'{i["address"]}/{i["bits"]}')
+                'ip': [ip_interface(f'{i["address"]}/{i["bits"]}')
                        for i in itertools.chain(iface['ip4'], iface['ip6'])],
             })
         return OrderedDict(
@@ -529,27 +527,23 @@ class BaseResource:
         return False
 
     def is_meaningful_address(self, ip):
-        # https://github.com/netaddr/netaddr/issues/222
-        # netaddr with fix is not released.
-        if ip in IPV6_LOOPBACK:
-            return False
-        return not (ip.is_loopback() or ip.is_link_local())
+        return not (ip.ip.is_loopback or ip.ip.is_link_local)
 
     def assign_ip_address(self, interface_id, ip, dry_run):
-        if ip.ip == ip.network:
-            if ip.version == 4 and ip.prefixlen not in (31, 32):
+        net = ip.network
+
+        # Allow assigning from /31 /32 (and /127 /128 for IPv6), but disallow
+        # the network address (and broadcast for IPv4).
+        if net.num_addresses > 2:
+            if ip.ip == net.network_address:
                 log.debug(
                     '%s cannot assign network ID %s to interface', self, ip)
                 return
-            elif ip.version == 6 and ip.prefixlen not in (127, 128):
+            if ip.version == 4 and ip.ip == net.broadcast_address:
                 log.debug(
-                    '%s cannot assign network ID %s to interface', self, ip)
+                    '%s cannot assign network broadcast %s to interface',
+                    self, ip)
                 return
-        if (ip.ip == ip.broadcast and ip.version == 4
-                and ip.prefixlen not in (31, 32)):
-            log.debug(
-                '%s cannot assign network broadcast %s to interface', self, ip)
-            return
 
         addresses = []
         assigned_addresses = {}
@@ -614,7 +608,7 @@ class BaseResource:
             log.debug('%s does not have a valid IPMI IP', self)
             return
 
-        ip = IPNetwork(f'{data["IP Address"]}/{data["Subnet Mask"]}')
+        ip = ip_interface(f'{data["IP Address"]}/{data["Subnet Mask"]}')
         interface = self.get_interface_by_name(self.bmc_interface)
         if interface is None:
             # Try with a broader search request.
