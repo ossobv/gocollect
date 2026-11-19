@@ -1,8 +1,8 @@
-FROM ubuntu:noble
+FROM harbor.osso.io/ossobv/ubuntu:noble
 
 RUN apt-get update -q && \
     apt-get install -qqy --no-install-recommends \
-      python3-netaddr python3-pika python3-requests && \
+      python3-pika python3-requests && \
     apt-get clean && \
     rm -rf /var/cache/apt /var/lib/apt
 
