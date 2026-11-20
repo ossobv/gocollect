@@ -1,20 +1,18 @@
 import os
 
 
-def file_is_equal(file1, file2):
-    if os.path.getsize(file1) != os.path.getsize(file2):
+def file_contents_equals(filename, content):
+    """
+    Return True if the file at filename holds exactly content (bytes).
+    Checks the size first, so differing files are usually not read.
+    """
+    try:
+        if os.path.getsize(filename) != len(content):
+            return False
+        with open(filename, 'rb') as fp:
+            return fp.read() == content
+    except FileNotFoundError:
         return False
-    with open(file1, 'rb') as fp1:
-        with open(file2, 'rb') as fp2:
-            while True:
-                buf1 = fp1.read(8192)
-                buf2 = fp2.read(8192)
-                assert len(buf1) == len(buf2), (buf1, buf2)
-                if buf1 != buf2:
-                    return False
-                if not buf1:
-                    break
-    return True
 
 
 def relpath(target, symlink):
