@@ -50,11 +50,17 @@ def main():
         uri.username, uri.password)
 
     parameters = pika.ConnectionParameters(
-        host=uri.host, heartbeat=10, virtual_host=uri.vhost,
+        host=uri.host, port=uri.port, heartbeat=10, virtual_host=uri.vhost,
         credentials=credentials)
 
+    # Reconnect if we have not received anything for this many seconds
+    # (0 to disable). All clients push every 4 hours, so with any
+    # reasonable amount of clients, we should get messages constantly.
+    idle_timeout = int(environ.get('RMQ2FILE_IDLE_TIMEOUT', '1800'))
+
     consumer = RMQConsumer(
-        parameters, callback, uri.exchange, uri.routing_key, uri.queue)
+        parameters, callback, uri.exchange, uri.routing_key, uri.queue,
+        idle_timeout=idle_timeout)
 
     try:
         logger.info('Started')
